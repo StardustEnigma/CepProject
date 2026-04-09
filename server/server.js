@@ -1,15 +1,48 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const path = require("path");
+const bcrypt = require("bcryptjs");
+
+const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Access token is missing" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: "Invalid or expired token" });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:3000", "http://localhost:5000"].filter(Boolean);
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1") || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn("Blocked by CORS origin:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  }
+}));
 app.use(express.json());
 
 const ADMIN_CREDENTIALS = {
   username: "admin",
-  password: "admin123"
+  passwordHash: bcrypt.hashSync("admin123", 10)
 };
 
 const batchesList = ["8th class", "9th class", "10th class", "11th class", "12th class"];
@@ -35,7 +68,7 @@ for (const batch of batchesList) {
     students.push({
       id: studentIdCounter,
       name: `${randomFirstName} ${randomLastName}`,
-      password: "password123",
+      password: bcrypt.hashSync("password123", 10),
       batch: batch,
       feesTotal: feesTotal,
       feesPaid: feesPaid,
@@ -155,11 +188,13 @@ app.post("/login/admin", (req, res) => {
 
   if (
     username === ADMIN_CREDENTIALS.username &&
-    password === ADMIN_CREDENTIALS.password
+    bcrypt.compareSync(password, ADMIN_CREDENTIALS.passwordHash)
   ) {
+    const token = jwt.sign({ username: ADMIN_CREDENTIALS.username, role: 'admin' }, JWT_SECRET, { expiresIn: '1d' });
     return res.json({
       role: "admin",
-      message: "Admin login successful"
+      message: "Admin login successful",
+      token
     });
   }
 
@@ -178,23 +213,26 @@ app.post("/login/student", (req, res) => {
   }
 
   const student = students.find(
-    (item) =>
-      item.name.toLowerCase() === String(name).trim().toLowerCase() &&
-      item.password === password
+    (item) => item.name.toLowerCase() === String(name).trim().toLowerCase()
   );
 
-  if (!student) {
+  if (!student || !bcrypt.compareSync(password, student.password)) {
     return res.status(401).json({
       message: "Invalid student credentials"
     });
   }
 
+  const token = jwt.sign({ id: student.id, name: student.name, role: 'student' }, JWT_SECRET, { expiresIn: '1d' });
+
   return res.json({
     role: "student",
     message: "Student login successful",
-    student: sanitizeStudent(student)
+    student: sanitizeStudent(student),
+    token
   });
 });
+
+app.use(authenticateToken);
 
 app.get("/students", (req, res) => {
   const response = students.map(sanitizeStudent);
@@ -237,7 +275,7 @@ app.post("/students", (req, res) => {
   const newStudent = {
     id: getNextId(students),
     name: String(name).trim(),
-    password: String(password).trim(),
+    password: bcrypt.hashSync(String(password).trim(), 10),
     batch: String(batch).trim(),
     feesTotal: Number(feesTotal),
     feesPaid: 0,
@@ -435,6 +473,13 @@ app.delete("/timetable/:id", (req, res) => {
     message: "Timetable entry deleted successfully",
     timetable: deletedEntry
   });
+});
+
+// --- Serve Frontend ---
+app.use(express.static(path.join(__dirname, '../client/build')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
 });
 
 app.listen(PORT, () => {

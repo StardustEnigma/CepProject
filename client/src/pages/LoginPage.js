@@ -47,6 +47,8 @@ const LoginPage = () => {
         throw new Error(data.message || "Login failed");
       }
 
+      localStorage.setItem("token", data.token);
+
       if (mode === "admin") {
         localStorage.setItem("role", "admin");
         localStorage.removeItem("studentId");
