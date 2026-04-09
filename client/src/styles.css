@@ -1,0 +1,967 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap");
+
+/* ─── Design Tokens ─── */
+:root {
+  --bg-main: #fdf6ee;
+  --bg-soft: #fff8f0;
+  --surface: #ffffff;
+  --surface-alt: #fffaf5;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --text-main: #2d1b06;
+  --text-muted: #7a6248;
+  --text-light: #a8957e;
+
+  /* Logo-aligned palette */
+  --primary: #e65100;
+  --primary-light: #ff8f00;
+  --primary-glow: rgba(230, 81, 0, 0.12);
+  --accent: #b71c1c;
+  --accent-light: #d32f2f;
+  --gold: #ffc107;
+  --gold-soft: #fff3cd;
+  --saffron: #ff9800;
+
+  --success: #2e7d32;
+  --success-light: #e8f5e9;
+  --danger: #c62828;
+  --danger-light: #ffebee;
+
+  --shadow-sm: 0 2px 8px rgba(45, 27, 6, 0.06);
+  --shadow: 0 8px 32px rgba(45, 27, 6, 0.08);
+  --shadow-lg: 0 20px 60px rgba(45, 27, 6, 0.12);
+  --shadow-glow: 0 4px 24px rgba(230, 81, 0, 0.15);
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+
+  --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Reset & Base ─── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  color: var(--text-main);
+  background: var(--bg-main);
+  background-image:
+    radial-gradient(ellipse at 0% 0%, rgba(255, 152, 0, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 0%, rgba(183, 28, 28, 0.05) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 100%, rgba(255, 193, 7, 0.06) 0%, transparent 50%);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: "Playfair Display", serif;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+p { margin: 0; line-height: 1.6; }
+a { text-decoration: none; }
+
+/* ─── Layout Shells ─── */
+.page-shell,
+.dashboard-shell {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+  animation: riseIn 500ms ease-out;
+}
+
+/* ─── Auth / Login Card ─── */
+.auth-card {
+  width: min(480px, 100%);
+  margin: 2rem auto;
+  background: var(--surface);
+  border-radius: 24px;
+  border: 1px solid rgba(230, 81, 0, 0.1);
+  box-shadow: var(--shadow-lg);
+  padding: 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--primary), var(--gold));
+}
+
+.auth-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 1rem;
+  filter: drop-shadow(0 4px 12px rgba(230, 81, 0, 0.2));
+}
+
+.auth-title {
+  text-align: center;
+  font-size: 1.75rem;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  text-align: center;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+/* ─── Mode Switch (Login Tabs) ─── */
+.mode-switch {
+  display: flex;
+  gap: 0;
+  margin: 1.5rem 0;
+  background: #f5efe8;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.chip {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: "Poppins", sans-serif;
+}
+
+.chip-active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Forms ─── */
+.form-stack,
+.form-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.input {
+  width: 100%;
+  border: 2px solid #ede5da;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0.72rem 0.85rem;
+  font-size: 0.95rem;
+  font-family: "Poppins", sans-serif;
+  color: var(--text-main);
+  transition: all var(--transition);
+}
+
+.input:focus {
+  border-color: var(--primary-light);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.input::placeholder {
+  color: var(--text-light);
+}
+
+.textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* ─── Buttons ─── */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.72rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: "Poppins", sans-serif;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+  filter: brightness(1.05);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+.button-secondary {
+  background: linear-gradient(135deg, #5d4037, #795548);
+}
+
+.button-danger {
+  background: linear-gradient(135deg, var(--danger), var(--accent-light));
+}
+
+.button-success {
+  background: linear-gradient(135deg, #2e7d32, #43a047);
+}
+
+.button-primary {
+  background: linear-gradient(135deg, var(--primary), var(--saffron));
+}
+
+/* ─── Credentials Hint ─── */
+.credentials-hint {
+  margin-top: 1.25rem;
+  background: var(--gold-soft);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  padding: 0.85rem 1rem;
+  color: #6d5200;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+}
+
+/* ─── Top Bar (Header) ─── */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 2px solid rgba(230, 81, 0, 0.08);
+}
+
+.top-bar-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.top-bar-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(230, 81, 0, 0.2));
+}
+
+.eyebrow {
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.72rem;
+  margin-bottom: 0.1rem;
+  font-family: "Poppins", sans-serif;
+}
+
+.top-bar h1 {
+  font-size: 1.35rem;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Navigation Tabs ─── */
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+  background: rgba(255, 152, 0, 0.04);
+  border-radius: 14px;
+  padding: 5px;
+  border: 1px solid rgba(230, 81, 0, 0.06);
+}
+
+.admin-nav-link {
+  text-decoration: none;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: all var(--transition);
+}
+
+.admin-nav-link:hover {
+  background: rgba(230, 81, 0, 0.06);
+  color: var(--primary);
+}
+
+.admin-nav-link-active {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light)) !important;
+  box-shadow: var(--shadow-glow);
+}
+
+/* ─── Content Panels ─── */
+.panel {
+  margin-top: 1rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid rgba(230, 81, 0, 0.08);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  transition: box-shadow var(--transition);
+}
+
+.panel:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.panel h2 {
+  margin-bottom: 1rem;
+  font-size: 1.15rem;
+}
+
+.panel h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-content-panel {
+  margin-top: 0;
+}
+
+.admin-page {
+  display: grid;
+  gap: 1rem;
+}
+
+/* ─── Quick Cards Grid ─── */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.quick-card {
+  border: 1px solid rgba(230, 81, 0, 0.1);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--gold));
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.quick-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: rgba(230, 81, 0, 0.2);
+}
+
+.quick-card:hover::after {
+  opacity: 1;
+}
+
+.quick-card h3 {
+  font-size: 1rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+}
+
+.quick-card p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* ─── Stats Cards (Dashboard) ─── */
+.stat-card {
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.4rem;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+
+.stat-card h3 {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-card .stat-value {
+  font-family: "Playfair Display", serif;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+/* ─── Grid Helpers ─── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+/* ─── Tables ─── */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.75rem 0.85rem;
+}
+
+.table th {
+  background: linear-gradient(135deg, rgba(230, 81, 0, 0.06), rgba(255, 152, 0, 0.04));
+  color: var(--primary);
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid rgba(230, 81, 0, 0.1);
+  position: sticky;
+  top: 0;
+}
+
+.table td {
+  border-bottom: 1px solid #f0e8de;
+  font-size: 0.9rem;
+  transition: background var(--transition);
+}
+
+.table tbody tr:hover td {
+  background: rgba(255, 152, 0, 0.03);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─── Notices ─── */
+.notice-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.notice-item {
+  background: var(--surface-alt);
+  border: 1px solid rgba(230, 81, 0, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: all var(--transition);
+}
+
+.notice-item:hover {
+  border-color: rgba(230, 81, 0, 0.2);
+  box-shadow: var(--shadow-sm);
+}
+
+.notice-item h3 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+}
+
+.notice-item p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.notice-item span {
+  color: var(--text-light);
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+/* ─── Utility Classes ─── */
+.muted {
+  color: var(--text-muted);
+}
+
+.loading-text {
+  font-size: 1rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem;
+}
+
+.text-success { color: var(--success) !important; font-weight: 600; }
+.text-danger { color: var(--danger) !important; font-weight: 600; }
+
+/* ─── Alerts ─── */
+.alert {
+  margin: 0.75rem 0;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alert-error {
+  background: var(--danger-light);
+  border-color: #ffcdd2;
+  color: var(--danger);
+}
+
+.alert-success {
+  background: var(--success-light);
+  border-color: #c8e6c9;
+  color: var(--success);
+}
+
+/* ─── Status Badges ─── */
+.status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.22rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.status-badge.present {
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+}
+
+.status-badge.absent {
+  background: rgba(198, 40, 40, 0.1);
+  color: #c62828;
+}
+
+/* ─── Animations ─── */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ─── Responsive: Tablet ─── */
+@media (max-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .auth-card {
+    margin-top: 1rem;
+    padding: 1.5rem;
+  }
+
+  .admin-nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+}
+
+/* ─── Responsive: Mobile ─── */
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+
+  .page-shell,
+  .dashboard-shell {
+    width: calc(100% - 1rem);
+    padding: 1rem 0 5.5rem;
+  }
+
+  /* ── Login Card ── */
+  .auth-card {
+    margin: 0.75rem auto;
+    padding: 1.25rem;
+    border-radius: 16px;
+  }
+
+  .auth-logo {
+    width: 72px;
+    height: 72px;
+  }
+
+  .auth-title {
+    font-size: 1.35rem;
+  }
+
+  .subtitle {
+    font-size: 0.82rem;
+  }
+
+  .mode-switch {
+    margin: 1rem 0;
+  }
+
+  .chip {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .credentials-hint {
+    font-size: 0.8rem;
+    padding: 0.65rem 0.8rem;
+  }
+
+  /* ── Top Bar ── */
+  .top-bar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .top-bar-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .top-bar-brand {
+    gap: 0.6rem;
+  }
+
+  .top-bar h1 {
+    font-size: 1rem;
+  }
+
+  .eyebrow {
+    font-size: 0.62rem;
+  }
+
+  .top-bar > .button {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.78rem;
+  }
+
+  /* ── Mobile Bottom Navigation ── */
+  .admin-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(230, 81, 0, 0.12);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0;
+    display: flex;
+    justify-content: space-around;
+    gap: 0.15rem;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-nav-link {
+    font-size: 0.68rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .admin-nav-link-active {
+    box-shadow: 0 2px 8px rgba(230, 81, 0, 0.2);
+  }
+
+  /* ── Panels ── */
+  .panel {
+    padding: 0.85rem;
+    border-radius: 12px;
+    margin-top: 0.75rem;
+  }
+
+  .admin-content-panel {
+    margin-bottom: 0;
+  }
+
+  .panel h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .panel h3 {
+    font-size: 0.95rem;
+  }
+
+  /* ── Grids ── */
+  .quick-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .quick-card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .quick-card h3 {
+    font-size: 0.92rem;
+  }
+
+  .quick-card p {
+    font-size: 0.82rem;
+  }
+
+  .admin-page {
+    gap: 0.75rem;
+  }
+
+  .admin-page h2 {
+    font-size: 1.1rem;
+  }
+
+  .admin-page h3 {
+    font-size: 0.95rem;
+  }
+
+  /* ── Stat Cards ── */
+  .stat-card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .stat-card h3 {
+    font-size: 0.72rem;
+  }
+
+  /* ── Forms ── */
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .form-stack {
+    gap: 0.6rem;
+  }
+
+  .input {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+  }
+
+  label {
+    font-size: 0.75rem;
+  }
+
+  .button {
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    margin: 0 -0.85rem;
+    padding: 0 0.85rem;
+    border-radius: 0;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.55rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .table th {
+    font-size: 0.68rem;
+  }
+
+  /* ── Notices ── */
+  .notice-item {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .notice-item h3 {
+    font-size: 0.92rem;
+  }
+
+  .notice-item p {
+    font-size: 0.82rem;
+  }
+
+  /* ── Alerts ── */
+  .alert {
+    font-size: 0.82rem;
+    padding: 0.6rem 0.75rem;
+    margin: 0.5rem 0;
+  }
+
+  /* ── Loading ── */
+  .loading-text {
+    padding: 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* ─── Responsive: Very Small ─── */
+@media (max-width: 380px) {
+  .page-shell,
+  .dashboard-shell {
+    width: calc(100% - 0.75rem);
+  }
+
+  .auth-card {
+    padding: 1rem;
+  }
+
+  .auth-logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .auth-title {
+    font-size: 1.2rem;
+  }
+
+  .top-bar h1 {
+    font-size: 0.9rem;
+  }
+
+  .top-bar-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .admin-nav-link {
+    font-size: 0.62rem;
+    padding: 0.35rem 0.4rem;
+  }
+
+  .stat-card .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.4rem 0.35rem;
+    font-size: 0.72rem;
+  }
+}

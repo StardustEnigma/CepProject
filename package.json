@@ -1,0 +1,20 @@
+{
+  "name": "rural-coaching-center-digital-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "start": "concurrently -k \"npm start --workspace server\" \"npm start --workspace client\"",
+    "dev": "concurrently -k \"npm run dev --workspace server\" \"npm start --workspace client\"",
+    "start:server": "npm start --workspace server",
+    "start:client": "npm start --workspace client",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm start --workspace client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
