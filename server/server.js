@@ -46,6 +46,13 @@ const ADMIN_CREDENTIALS = {
 };
 
 const batchesList = ["8th class", "9th class", "10th class", "11th class", "12th class"];
+const batchSubjects = {
+  "8th class": ["Maths", "Science", "English", "SST"],
+  "9th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "10th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "11th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "12th class": ["Physics", "Chemistry", "Biology", "Maths"]
+};
 const firstNames = ["Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Krishna", "Ishaan", "Shaurya", "Priya", "Rohan", "Ananya", "Sneha", "Kavya", "Diya", "Isha", "Neha", "Pooja", "Rahul", "Aman", "Ravi", "Vikram", "Sunil", "Ankit", "Rohit", "Sachin", "Sushant", "Kiran", "Nisha"];
 const lastNames = ["Sharma", "Gupta", "Verma", "Singh", "Kumar", "Krishna", "Joshi", "Yadav", "Patel", "Desai", "Deshmukh", "Patil", "Iyer", "Rao", "Nair", "Pillai", "Chauhan", "Rajput", "Malhotra", "Kapoor"];
 
@@ -70,6 +77,7 @@ for (const batch of batchesList) {
       name: `${randomFirstName} ${randomLastName}`,
       password: bcrypt.hashSync("password123", 10),
       batch: batch,
+      subjects: batchSubjects[batch] || [],
       feesTotal: feesTotal,
       feesPaid: feesPaid,
       payments: payments,
@@ -102,53 +110,51 @@ const dayOrder = {
   Sunday: 7
 };
 
-let timetable = [
-  {
-    id: 1,
-    day: "Monday",
-    startTime: "09:00",
-    endTime: "10:00",
-    subject: "Mathematics",
-    teacher: "Mr. Jadhav",
-    batch: "10th class",
-    isExtraClass: false
-  },
-  {
-    id: 2,
-    day: "Wednesday",
-    startTime: "10:00",
-    endTime: "11:00",
-    subject: "Science",
-    teacher: "Ms. More",
-    batch: "10th class",
-    isExtraClass: false
-  },
-  {
-    id: 3,
-    day: "Friday",
-    startTime: "11:00",
-    endTime: "12:00",
-    subject: "English",
-    teacher: "Mrs. Kulkarni",
-    batch: "10th class",
-    isExtraClass: false
-  },
-  {
-    id: 4,
-    day: "Monday",
-    startTime: "10:00",
-    endTime: "11:00",
-    subject: "Physics",
-    teacher: "Mr. Sharma",
-    batch: "12th class",
-    isExtraClass: false
-  }
+let timetable = [];
+let ttIdCounter = 1;
+const classDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const times = [
+  { start: "16:00", end: "17:00" },
+  { start: "17:00", end: "18:00" },
+  { start: "18:00", end: "19:00" }
 ];
+// 8th class teachers
+const t8 = { Maths: "Bhaki maam", Science: "Shubham sir", SST: "Mowade sir", English: "Mowade sir" };
+// 9-12 teachers
+const tHigh = { Maths: "Akash sir", Physics: "Akash sir", Chemistry: "Shubham sir", Biology: "Shubham sir" };
+
+for (const day of classDays) {
+  // 8th class
+  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Maths", teacher: t8.Maths, batch: "8th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Science", teacher: t8.Science, batch: "8th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "SST", teacher: t8.SST, batch: "8th class", isExtraClass: false });
+
+  // 9th class
+  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Physics", teacher: tHigh.Physics, batch: "9th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "9th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Maths", teacher: tHigh.Maths, batch: "9th class", isExtraClass: false });
+
+  // 10th class
+  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "10th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Physics", teacher: tHigh.Physics, batch: "10th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Biology", teacher: tHigh.Biology, batch: "10th class", isExtraClass: false });
+
+  // 11th class
+  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Biology", teacher: tHigh.Biology, batch: "11th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Maths", teacher: tHigh.Maths, batch: "11th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "11th class", isExtraClass: false });
+
+  // 12th class
+  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Maths", teacher: tHigh.Maths, batch: "12th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Biology", teacher: tHigh.Biology, batch: "12th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Physics", teacher: tHigh.Physics, batch: "12th class", isExtraClass: false });
+}
 
 const sanitizeStudent = (student) => ({
   id: student.id,
   name: student.name,
   batch: student.batch || "N/A",
+  subjects: student.subjects || [],
   feesTotal: student.feesTotal || 0,
   feesPaid: student.feesPaid || 0,
   payments: student.payments || [],
@@ -253,7 +259,7 @@ app.get("/students/:id", (req, res) => {
 });
 
 app.post("/students", (req, res) => {
-  const { name, password, batch, feesTotal } = req.body;
+  const { name, password, batch, subjects, feesTotal } = req.body;
 
   if (!name || !String(name).trim() || !password || !String(password).trim() || !batch || feesTotal == null) {
     return res.status(400).json({
@@ -277,6 +283,7 @@ app.post("/students", (req, res) => {
     name: String(name).trim(),
     password: bcrypt.hashSync(String(password).trim(), 10),
     batch: String(batch).trim(),
+    subjects: Array.isArray(subjects) ? subjects : [],
     feesTotal: Number(feesTotal),
     feesPaid: 0,
     payments: [],
@@ -345,7 +352,7 @@ app.post("/students/:id/pay", (req, res) => {
 });
 
 app.post("/attendance", (req, res) => {
-  const { studentId, date, present } = req.body;
+  const { studentId, date, present, timetableId } = req.body;
 
   if (!studentId || !date || typeof present !== "boolean") {
     return res.status(400).json({
@@ -362,11 +369,15 @@ app.post("/attendance", (req, res) => {
     });
   }
 
-  const existingEntry = student.attendance.find((entry) => entry.date === date);
+  // Find slot to know the subject context, or save the timetableId
+  const slot = timetable.find((t) => t.id === Number(timetableId));
+  const subjectName = slot ? slot.subject : "General";
+
+  const existingEntry = student.attendance.find((entry) => entry.date === date && entry.subject === subjectName);
   if (existingEntry) {
     existingEntry.present = present;
   } else {
-    student.attendance.push({ date, present });
+    student.attendance.push({ date, present, subject: subjectName, timetableId });
   }
 
   student.attendance.sort((a, b) => a.date.localeCompare(b.date));
@@ -437,14 +448,44 @@ app.post("/timetable", (req, res) => {
     });
   }
 
+  const normalizedStartTime = String(startTime).trim();
+  const normalizedEndTime = String(endTime).trim();
+
+  if (normalizedStartTime >= normalizedEndTime) {
+    return res.status(400).json({
+      message: "startTime must be earlier than endTime"
+    });
+  }
+
+  if (normalizedEndTime > "19:00") {
+    return res.status(400).json({
+      message: "Classes must end by 19:00"
+    });
+  }
+
+  const normalizedBatch = String(batch).trim();
+  const duplicateSlot = timetable.find(
+    (item) =>
+      item.day === String(day).trim() &&
+      item.batch === normalizedBatch &&
+      item.startTime === normalizedStartTime &&
+      item.endTime === normalizedEndTime
+  );
+
+  if (duplicateSlot) {
+    return res.status(409).json({
+      message: "A timetable slot already exists for this batch, day and time"
+    });
+  }
+
   const entry = {
     id: getNextId(timetable),
     day: String(day).trim(),
-    startTime: String(startTime).trim(),
-    endTime: String(endTime).trim(),
+    startTime: normalizedStartTime,
+    endTime: normalizedEndTime,
     subject: String(subject).trim(),
     teacher: String(teacher).trim(),
-    batch: String(batch).trim(),
+    batch: normalizedBatch,
     isExtraClass: Boolean(isExtraClass)
   };
 

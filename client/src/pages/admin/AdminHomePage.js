@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../../utils/api";
 
 const cards = [
   {
@@ -24,13 +25,7 @@ const cards = [
   }
 ];
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const AdminHomePage = () => {
   const [students, setStudents] = useState([]);
@@ -39,7 +34,7 @@ const AdminHomePage = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await fetch("/students").then(parseResponse);
+        const data = await apiFetch("/students");
         setStudents(data);
       } catch (e) {
         console.error("Failed to load dashboard data", e);

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../utils/api";
 
 const dayOptions = [
   "Monday",
@@ -10,24 +11,25 @@ const dayOptions = [
   "Sunday"
 ];
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
+const batchOptions = ["8th class", "9th class", "10th class", "11th class", "12th class"];
+const batchSubjectsMap = {
+  "8th class": ["Maths", "Science", "English", "SST"],
+  "9th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "10th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "11th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "12th class": ["Physics", "Chemistry", "Biology", "Maths"]
 };
+
+// Removed manual parseResponse as apiFetch handles it.
 
 const AdminTimetablePage = () => {
   const [timetable, setTimetable] = useState([]);
   const [batchFilter, setBatchFilter] = useState("10th class");
   const [timetableForm, setTimetableForm] = useState({
     day: "Monday",
-    startTime: "09:00",
-    endTime: "10:00",
-    subject: "",
+    startTime: "16:00",
+    endTime: "17:00",
+    subject: batchSubjectsMap["10th class"][0],
     teacher: "",
     isExtraClass: false
   });
@@ -36,7 +38,7 @@ const AdminTimetablePage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadTimetable = async () => {
-    const data = await fetch("/timetable").then(parseResponse);
+    const data = await apiFetch("/timetable");
     setTimetable(data);
   };
 
@@ -61,18 +63,13 @@ const AdminTimetablePage = () => {
     setSuccess("");
 
     try {
-      const response = await fetch("/timetable", {
+      await apiFetch("/timetable", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({
           ...timetableForm,
           batch: batchFilter
         })
       });
-
-      await parseResponse(response);
       setTimetableForm((prev) => ({
         ...prev,
         subject: "",
@@ -96,11 +93,9 @@ const AdminTimetablePage = () => {
     }
 
     try {
-      const response = await fetch(`/timetable/${entryId}`, {
+      await apiFetch(`/timetable/${entryId}`, {
         method: "DELETE"
       });
-
-      await parseResponse(response);
       await loadTimetable();
       setSuccess("Timetable entry deleted successfully.");
     } catch (requestError) {
@@ -123,13 +118,18 @@ const AdminTimetablePage = () => {
         <select
           className="input"
           value={batchFilter}
-          onChange={(event) => setBatchFilter(event.target.value)}
+          onChange={(event) => {
+            const newBatch = event.target.value;
+            setBatchFilter(newBatch);
+            setTimetableForm(prev => ({
+              ...prev,
+              subject: batchSubjectsMap[newBatch] ? batchSubjectsMap[newBatch][0] : ""
+            }));
+          }}
         >
-          <option value="8th class">8th class</option>
-          <option value="9th class">9th class</option>
-          <option value="10th class">10th class</option>
-          <option value="11th class">11th class</option>
-          <option value="12th class">12th class</option>
+          {batchOptions.map(batch => (
+            <option key={batch} value={batch}>{batch}</option>
+          ))}
         </select>
       </div>
 
@@ -150,6 +150,8 @@ const AdminTimetablePage = () => {
         <input
           className="input"
           type="time"
+          min="06:00"
+          max="18:00"
           value={timetableForm.startTime}
           onChange={(event) =>
             setTimetableForm((prev) => ({ ...prev, startTime: event.target.value }))
@@ -158,19 +160,24 @@ const AdminTimetablePage = () => {
         <input
           className="input"
           type="time"
+          min="07:00"
+          max="19:00"
           value={timetableForm.endTime}
           onChange={(event) =>
             setTimetableForm((prev) => ({ ...prev, endTime: event.target.value }))
           }
         />
-        <input
+        <select
           className="input"
-          placeholder="Subject"
           value={timetableForm.subject}
           onChange={(event) =>
             setTimetableForm((prev) => ({ ...prev, subject: event.target.value }))
           }
-        />
+        >
+          {(batchSubjectsMap[batchFilter] || []).map(sub => (
+            <option key={sub} value={sub}>{sub}</option>
+          ))}
+        </select>
         <input
           className="input"
           placeholder="Teacher"

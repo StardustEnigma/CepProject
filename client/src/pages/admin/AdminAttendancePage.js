@@ -1,35 +1,33 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../utils/api";
 
 const today = new Date().toISOString().slice(0, 10);
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const AdminAttendancePage = () => {
   const [students, setStudents] = useState([]);
-  const [batchFilter, setBatchFilter] = useState("10th class");
+  const [timetable, setTimetable] = useState([]);
   const [attendanceDate, setAttendanceDate] = useState(today);
+  const [selectedSlotId, setSelectedSlotId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadStudents = async () => {
-    const data = await fetch("/students").then(parseResponse);
-    setStudents(data);
+  const loadData = async () => {
+    const [studentsData, timetableData] = await Promise.all([
+      apiFetch("/students"),
+      apiFetch("/timetable")
+    ]);
+    setStudents(studentsData);
+    setTimetable(timetableData);
   };
 
   useEffect(() => {
     const load = async () => {
       try {
         setError("");
-        await loadStudents();
+        await loadData();
       } catch (requestError) {
         setError(requestError.message || "Unable to load attendance page.");
       } finally {
@@ -40,15 +38,32 @@ const AdminAttendancePage = () => {
     load();
   }, []);
 
+  const dayName = useMemo(() => {
+    if (!attendanceDate) return "";
+    const dateObj = new Date(attendanceDate);
+    return isNaN(dateObj.getTime()) ? "" : dateObj.toLocaleDateString("en-US", { weekday: "long" });
+  }, [attendanceDate]);
+
+  const availableSlots = useMemo(() => {
+    return timetable.filter(t => t.day === dayName);
+  }, [timetable, dayName]);
+
+  const selectedSlot = useMemo(() => {
+    return availableSlots.find(s => s.id === Number(selectedSlotId));
+  }, [availableSlots, selectedSlotId]);
+
   const filteredStudents = useMemo(() => {
-    return students.filter(student => student.batch === batchFilter);
-  }, [students, batchFilter]);
+    if (!selectedSlot) return [];
+    return students.filter(s => s.batch === selectedSlot.batch && (s.subjects || []).includes(selectedSlot.subject));
+  }, [students, selectedSlot]);
 
   const attendanceSummary = useMemo(
     () =>
       filteredStudents.map((student) => {
+        const subjectName = selectedSlot?.subject || "General";
+        const currentEntry = student.attendance.find((entry) => entry.date === attendanceDate && entry.subject === subjectName);
         const presentCount = student.attendance.filter((entry) => entry.present).length;
-        const currentEntry = student.attendance.find((entry) => entry.date === attendanceDate);
+        
         return {
           id: student.id,
           name: student.name,
@@ -57,7 +72,7 @@ const AdminAttendancePage = () => {
           statusToday: currentEntry ? (currentEntry.present ? "Present" : "Absent") : "Not Marked"
         };
       }),
-    [filteredStudents, attendanceDate]
+    [filteredStudents, attendanceDate, selectedSlot]
   );
 
   const handleMarkAttendance = async (studentId, present) => {
@@ -65,20 +80,17 @@ const AdminAttendancePage = () => {
     setSuccess("");
 
     try {
-      const response = await fetch("/attendance", {
+      await apiFetch("/attendance", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({
           studentId: Number(studentId),
           date: attendanceDate,
+          timetableId: selectedSlotId,
           present: present
         })
       });
 
-      await parseResponse(response);
-      await loadStudents();
+      await loadData();
       setSuccess("Attendance marked successfully.");
     } catch (requestError) {
       setError(requestError.message || "Unable to mark attendance.");
@@ -93,27 +105,33 @@ const AdminAttendancePage = () => {
       {success ? <p className="alert alert-success">{success}</p> : null}
 
       <div className="form-grid" style={{ marginBottom: "20px" }}>
-        <select
-          className="input"
-          value={batchFilter}
-          onChange={(event) => setBatchFilter(event.target.value)}
-        >
-          <option value="8th class">8th class</option>
-          <option value="9th class">9th class</option>
-          <option value="10th class">10th class</option>
-          <option value="11th class">11th class</option>
-          <option value="12th class">12th class</option>
-        </select>
         <input
           className="input"
           type="date"
           value={attendanceDate}
-          onChange={(event) => setAttendanceDate(event.target.value)}
+          onChange={(event) => {
+            setAttendanceDate(event.target.value);
+            setSelectedSlotId("");
+          }}
         />
+        <select
+          className="input"
+          value={selectedSlotId}
+          onChange={(event) => setSelectedSlotId(event.target.value)}
+        >
+          <option value="">-- Select Timetable Slot ({dayName}) --</option>
+          {availableSlots.map(slot => (
+            <option key={slot.id} value={slot.id}>
+              {slot.batch} - {slot.subject} ({slot.startTime}-{slot.endTime})
+            </option>
+          ))}
+        </select>
       </div>
 
       {isLoading ? (
         <p className="loading-text">Loading attendance summary...</p>
+      ) : !selectedSlotId ? (
+        <p className="muted">Please select a date and time slot to mark attendance.</p>
       ) : (
         <div className="table-wrap">
           <table className="table">

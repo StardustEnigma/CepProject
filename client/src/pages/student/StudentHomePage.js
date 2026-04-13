@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../../utils/api";
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const StudentHomePage = () => {
   const studentId = localStorage.getItem("studentId");
@@ -27,10 +20,10 @@ const StudentHomePage = () => {
       }
 
       try {
-        const studentData = await fetch(`/students/${studentId}`).then(parseResponse);
+        const studentData = await apiFetch(`/students/${studentId}`);
         setStudent(studentData);
         
-        const noticesData = await fetch("/notices").then(parseResponse);
+        const noticesData = await apiFetch("/notices");
         // Only show the 2 most recent notices
         setLatestNotices(noticesData.slice(0, 2));
       } catch (requestError) {
@@ -91,6 +84,7 @@ const StudentHomePage = () => {
             <h3 style={{ color: '#e65100' }}>Student</h3>
             <p className="stat-value" style={{ color: '#bf360c', fontSize: '1.35rem' }}>{student.name}</p>
             <p style={{ fontSize: '0.85rem', color: '#e65100' }}>Batch: {student.batch}</p>
+            <p style={{ fontSize: '0.75rem', color: '#e65100', marginTop: '4px' }}>Subjects: {student.subjects?.join(", ")}</p>
           </article>
           <article className="stat-card" style={{ background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)', borderColor: '#a5d6a7' }}>
             <h3 style={{ color: '#2e7d32' }}>Attendance</h3>

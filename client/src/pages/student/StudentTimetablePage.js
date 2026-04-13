@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { apiFetch } from "../../utils/api";
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const StudentTimetablePage = () => {
   const [timetable, setTimetable] = useState([]);
@@ -23,10 +16,11 @@ const StudentTimetablePage = () => {
           throw new Error("Student session not found. Please log in again.");
         }
 
-        const student = await fetch(`/students/${studentId}`).then(parseResponse);
-        const data = await fetch("/timetable").then(parseResponse);
+        const student = await apiFetch(`/students/${studentId}`);
+        const data = await apiFetch("/timetable");
 
-        setTimetable(data.filter(entry => entry.batch === student.batch));
+        const enrolledSubjects = student.subjects || [];
+        setTimetable(data.filter(entry => entry.batch === student.batch && enrolledSubjects.includes(entry.subject)));
       } catch (requestError) {
         setError(requestError.message || "Unable to load timetable.");
       } finally {

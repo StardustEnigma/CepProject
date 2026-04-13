@@ -37,9 +37,15 @@ const StudentDashboard = () => {
           fetch("/timetable").then(parseResponse)
         ]);
 
+        const safeSubjects = studentData.subjects || [];
         setStudent(studentData);
         setNotices(noticesData);
-        setTimetable(timetableData);
+        
+        // Filter timetable to only include entries for this student's batch and enrolled subjects
+        const filteredTimetable = timetableData.filter(
+          (entry) => entry.batch === studentData.batch && safeSubjects.includes(entry.subject)
+        );
+        setTimetable(filteredTimetable);
       } catch (requestError) {
         setError(requestError.message || "Unable to load dashboard.");
       } finally {
@@ -81,6 +87,12 @@ const StudentDashboard = () => {
         <h2>Profile Overview</h2>
         <p>
           <strong>Name:</strong> {student?.name || "N/A"}
+        </p>
+        <p>
+          <strong>Batch:</strong> {student?.batch || "N/A"}
+        </p>
+        <p>
+          <strong>Enrolled Subjects:</strong> {student?.subjects?.length > 0 ? student.subjects.join(", ") : "None"}
         </p>
         <p>
           <strong>Fees Pending:</strong> ₹{student?.feesPending ?? 0}

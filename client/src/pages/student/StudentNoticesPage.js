@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { apiFetch } from "../../utils/api";
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const StudentNoticesPage = () => {
   const [notices, setNotices] = useState([]);
@@ -18,7 +11,7 @@ const StudentNoticesPage = () => {
   useEffect(() => {
     const loadNotices = async () => {
       try {
-        const data = await fetch("/notices").then(parseResponse);
+        const data = await apiFetch("/notices");
         setNotices(data);
       } catch (requestError) {
         setError(requestError.message || "Unable to load notices.");

@@ -1,26 +1,33 @@
 import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
+import { apiFetch } from "../../utils/api";
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
+const batchSubjectsMap = {
+  "8th class": ["Maths", "Science", "English", "SST"],
+  "9th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "10th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "11th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "12th class": ["Physics", "Chemistry", "Biology", "Maths"]
 };
+
+// Removed manual parseResponse as apiFetch handles it.
 
 const AdminStudentsPage = () => {
   const [students, setStudents] = useState([]);
-  const [studentForm, setStudentForm] = useState({ name: "", password: "", batch: "8th class", feesTotal: "" });
+  const [studentForm, setStudentForm] = useState({ 
+    name: "", 
+    password: "", 
+    batch: "8th class", 
+    subjects: ["Maths", "Science", "English", "SST"],
+    feesTotal: 10000 
+  });
   const [payModal, setPayModal] = useState({ studentId: null, amount: "", mode: "UPI" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   const loadStudents = async () => {
-    const data = await fetch("/students").then(parseResponse);
+    const data = await apiFetch("/students");
     setStudents(data);
   };
 
@@ -63,16 +70,17 @@ const AdminStudentsPage = () => {
     clearFlash();
 
     try {
-      const response = await fetch("/students", {
+      await apiFetch("/students", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify(studentForm)
       });
-
-      await parseResponse(response);
-      setStudentForm({ name: "", password: "", batch: "8th class", feesTotal: "" });
+      setStudentForm({ 
+        name: "", 
+        password: "", 
+        batch: "8th class", 
+        subjects: batchSubjectsMap["8th class"],
+        feesTotal: 10000 
+      });
       await loadStudents();
       setSuccess("Student added successfully.");
     } catch (requestError) {
@@ -89,11 +97,9 @@ const AdminStudentsPage = () => {
     }
 
     try {
-      const response = await fetch(`/students/${studentId}`, {
+      await apiFetch(`/students/${studentId}`, {
         method: "DELETE"
       });
-
-      await parseResponse(response);
       await loadStudents();
       setSuccess("Student deleted successfully.");
     } catch (requestError) {
@@ -112,15 +118,10 @@ const AdminStudentsPage = () => {
     clearFlash();
 
     try {
-      const response = await fetch(`/students/${payModal.studentId}/pay`, {
+      const data = await apiFetch(`/students/${payModal.studentId}/pay`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({ amount: Number(payModal.amount), mode: payModal.mode })
       });
-
-      const data = await parseResponse(response);
       
       // Generate PDF
       const student = data.student;
@@ -183,9 +184,14 @@ const AdminStudentsPage = () => {
         <select
           className="input"
           value={studentForm.batch}
-          onChange={(event) =>
-            setStudentForm((prev) => ({ ...prev, batch: event.target.value }))
-          }
+          onChange={(event) => {
+            const newBatch = event.target.value;
+            setStudentForm((prev) => ({ 
+              ...prev, 
+              batch: newBatch, 
+              subjects: batchSubjectsMap[newBatch] || []
+            }));
+          }}
         >
           <option value="8th class">8th class</option>
           <option value="9th class">9th class</option>
@@ -202,7 +208,28 @@ const AdminStudentsPage = () => {
             setStudentForm((prev) => ({ ...prev, feesTotal: event.target.value }))
           }
         />
-        <button className="button" type="submit">
+        <div style={{ gridColumn: "1 / -1", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+          <strong>Subjects:</strong>
+          {(batchSubjectsMap[studentForm.batch] || []).map((sub) => (
+            <label key={sub} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              <input 
+                type="checkbox" 
+                checked={studentForm.subjects.includes(sub)}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  setStudentForm((prev) => {
+                    const newSubjects = isChecked 
+                      ? [...prev.subjects, sub] 
+                      : prev.subjects.filter((s) => s !== sub);
+                    return { ...prev, subjects: newSubjects };
+                  });
+                }}
+              />
+              {sub}
+            </label>
+          ))}
+        </div>
+        <button className="button" type="submit" style={{ gridColumn: "1 / -1" }}>
           Add Student
         </button>
       </form>
@@ -248,7 +275,7 @@ const AdminStudentsPage = () => {
               <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th>Batch</th>
+                <th>Batch & Subjects</th>
                 <th>Attendance</th>
                 <th>Total Fees</th>
                 <th>Fees Pending</th>
@@ -260,7 +287,10 @@ const AdminStudentsPage = () => {
                 <tr key={student.id}>
                   <td>{student.id}</td>
                   <td>{student.name}</td>
-                  <td>{student.batch}</td>
+                  <td>
+                    <div><strong>{student.batch}</strong></div>
+                    <div className="muted" style={{ fontSize: "0.85em" }}>{student.subjects?.join(", ")}</div>
+                  </td>
                   <td>
                     {student.presentCount}/{student.totalAttendance} days present
                   </td>

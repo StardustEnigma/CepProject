@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { apiFetch } from "../../utils/api";
 
 const today = new Date().toISOString().slice(0, 10);
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const feeStructure = [
   { id: 1, item: "Admission Fee", amount: 1000 },
@@ -41,7 +34,7 @@ const StudentFeesPage = () => {
       }
 
       try {
-        const studentData = await fetch(`/students/${studentId}`).then(parseResponse);
+        const studentData = await apiFetch(`/students/${studentId}`);
         setStudent(studentData);
         setPayments(studentData.payments || []);
       } catch (requestError) {

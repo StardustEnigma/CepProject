@@ -42,7 +42,17 @@ const LoginPage = () => {
         body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      let data = {};
+      const rawResponse = await response.text();
+
+      if (rawResponse) {
+        try {
+          data = JSON.parse(rawResponse);
+        } catch {
+          throw new Error("Unable to reach the server. Please ensure backend is running.");
+        }
+      }
+
       if (!response.ok) {
         throw new Error(data.message || "Login failed");
       }

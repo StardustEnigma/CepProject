@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { apiFetch } from "../../utils/api";
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const StudentAttendancePage = () => {
   const studentId = localStorage.getItem("studentId");
@@ -25,7 +18,7 @@ const StudentAttendancePage = () => {
       }
 
       try {
-        const data = await fetch(`/students/${studentId}`).then(parseResponse);
+        const data = await apiFetch(`/students/${studentId}`);
         setStudent(data);
       } catch (requestError) {
         setError(requestError.message || "Unable to load attendance.");
@@ -52,13 +45,15 @@ const StudentAttendancePage = () => {
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Subject</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {student.attendance.map((entry) => (
-                <tr key={entry.date}>
+                <tr key={entry.date + entry.subject}>
                   <td>{entry.date}</td>
+                  <td>{entry.subject || "General"}</td>
                   <td>
                     <span
                       className={entry.present ? "status-badge present" : "status-badge absent"}

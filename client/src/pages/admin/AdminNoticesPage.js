@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { apiFetch } from "../../utils/api";
 
-const parseResponse = async (response) => {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
+// Removed manual parseResponse as apiFetch handles it.
 
 const AdminNoticesPage = () => {
   const [notices, setNotices] = useState([]);
@@ -18,7 +11,7 @@ const AdminNoticesPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadNotices = async () => {
-    const data = await fetch("/notices").then(parseResponse);
+    const data = await apiFetch("/notices");
     setNotices(data);
   };
 
@@ -43,15 +36,10 @@ const AdminNoticesPage = () => {
     setSuccess("");
 
     try {
-      const response = await fetch("/notices", {
+      await apiFetch("/notices", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify(noticeForm)
       });
-
-      await parseResponse(response);
       setNoticeForm({ title: "", content: "" });
       await loadNotices();
       setSuccess("Notice posted successfully.");

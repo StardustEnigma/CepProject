@@ -12,6 +12,15 @@ const dayOptions = [
   "Sunday"
 ];
 
+const batchOptions = ["8th class", "9th class", "10th class", "11th class", "12th class"];
+const batchSubjectsMap = {
+  "8th class": ["Maths", "Science", "English", "SST"],
+  "9th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "10th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "11th class": ["Physics", "Chemistry", "Biology", "Maths"],
+  "12th class": ["Physics", "Chemistry", "Biology", "Maths"]
+};
+
 const parseResponse = async (response) => {
   const data = await response.json();
 
@@ -33,11 +42,15 @@ const AdminDashboard = () => {
 
   const [studentForm, setStudentForm] = useState({
     name: "",
-    password: ""
+    password: "",
+    batch: "8th class",
+    subjects: ["Maths", "Science", "English", "SST"],
+    feesTotal: 10000
   });
   const [attendanceForm, setAttendanceForm] = useState({
     studentId: "",
     date: today,
+    timetableId: "",
     present: true
   });
   const [noticeForm, setNoticeForm] = useState({
@@ -48,7 +61,8 @@ const AdminDashboard = () => {
     day: "Monday",
     startTime: "09:00",
     endTime: "10:00",
-    subject: "",
+    batch: "8th class",
+    subject: batchSubjectsMap["8th class"][0],
     teacher: ""
   });
 
@@ -124,7 +138,13 @@ const AdminDashboard = () => {
       });
 
       await parseResponse(response);
-      setStudentForm({ name: "", password: "" });
+      setStudentForm({ 
+        name: "", 
+        password: "", 
+        batch: "8th class", 
+        subjects: batchSubjectsMap["8th class"], 
+        feesTotal: 10000 
+      });
       await refreshData();
       setSuccess("Student added successfully.");
     } catch (requestError) {
@@ -166,6 +186,7 @@ const AdminDashboard = () => {
         body: JSON.stringify({
           studentId: Number(attendanceForm.studentId),
           date: attendanceForm.date,
+          timetableId: attendanceForm.timetableId,
           present: attendanceForm.present
         })
       });
@@ -216,7 +237,7 @@ const AdminDashboard = () => {
       await parseResponse(response);
       setTimetableForm((prev) => ({
         ...prev,
-        subject: "",
+        subject: batchSubjectsMap[prev.batch][0],
         teacher: ""
       }));
       await refreshData();
@@ -290,7 +311,55 @@ const AdminDashboard = () => {
               setStudentForm((prev) => ({ ...prev, password: event.target.value }))
             }
           />
-          <button className="button" type="submit">
+          <select
+            className="input"
+            value={studentForm.batch}
+            onChange={(event) => {
+              const newBatch = event.target.value;
+              setStudentForm((prev) => ({
+                ...prev,
+                batch: newBatch,
+                subjects: batchSubjectsMap[newBatch]
+              }));
+            }}
+          >
+            {batchOptions.map((batch) => (
+              <option key={batch} value={batch}>
+                {batch}
+              </option>
+            ))}
+          </select>
+          <input
+            className="input"
+            type="number"
+            placeholder="Fees Total"
+            value={studentForm.feesTotal}
+            onChange={(event) =>
+              setStudentForm((prev) => ({ ...prev, feesTotal: event.target.value }))
+            }
+          />
+          <div style={{ gridColumn: "1 / -1", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+            <strong>Select Subjects:</strong>
+            {batchSubjectsMap[studentForm.batch].map((sub) => (
+              <label key={sub} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                <input 
+                  type="checkbox" 
+                  checked={studentForm.subjects.includes(sub)}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setStudentForm((prev) => {
+                      const newSubjects = isChecked 
+                        ? [...prev.subjects, sub] 
+                        : prev.subjects.filter((s) => s !== sub);
+                      return { ...prev, subjects: newSubjects };
+                    });
+                  }}
+                />
+                {sub}
+              </label>
+            ))}
+          </div>
+          <button className="button" type="submit" style={{ gridColumn: "1 / -1" }}>
             Add Student
           </button>
         </form>
@@ -307,6 +376,7 @@ const AdminDashboard = () => {
                 <tr>
                   <th>ID</th>
                   <th>Name</th>
+                  <th>Batch & Subjects</th>
                   <th>Attendance</th>
                   <th>Fees Pending</th>
                   <th>Action</th>
@@ -317,6 +387,10 @@ const AdminDashboard = () => {
                   <tr key={student.id}>
                     <td>{student.id}</td>
                     <td>{student.name}</td>
+                    <td>
+                      <div><strong>{student.batch}</strong></div>
+                      <div className="muted" style={{ fontSize: "0.85em" }}>{student.subjects?.join(", ")}</div>
+                    </td>
                     <td>
                       {student.presentCount}/{student.totalAttendance} days present
                     </td>
@@ -344,6 +418,50 @@ const AdminDashboard = () => {
         <article className="panel">
           <h2>Mark Attendance</h2>
           <form className="form-stack" onSubmit={handleAttendance}>
+            <label htmlFor="attendance-date">Date</label>
+            <input
+              id="attendance-date"
+              className="input"
+              type="date"
+              value={attendanceForm.date}
+              onChange={(event) =>
+                setAttendanceForm((prev) => ({ ...prev, date: event.target.value, timetableId: "", studentId: "" }))
+              }
+            />
+
+            {(() => {
+              // Ensure invalid dates do not break String methods
+              let dayName = "";
+              if (attendanceForm.date) {
+                const dateObj = new Date(attendanceForm.date);
+                if (!isNaN(dateObj.getTime())) {
+                  dayName = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+                }
+              }
+              const daySlots = timetable.filter(t => t.day === dayName);
+
+              return (
+                <>
+                  <label htmlFor="attendance-slot">Timetable Slot ({dayName || "Select Valid Date"})</label>
+                  <select
+                    id="attendance-slot"
+                    className="input"
+                    value={attendanceForm.timetableId}
+                    onChange={(event) => {
+                      setAttendanceForm((prev) => ({ ...prev, timetableId: event.target.value, studentId: "" }));
+                    }}
+                  >
+                    <option value="">-- Select Slot --</option>
+                    {daySlots.map(slot => (
+                      <option key={slot.id} value={slot.id}>
+                        {slot.batch} - {slot.subject} ({slot.startTime} to {slot.endTime})
+                      </option>
+                    ))}
+                  </select>
+                </>
+              );
+            })()}
+
             <label htmlFor="attendance-student">Student</label>
             <select
               id="attendance-student"
@@ -352,25 +470,22 @@ const AdminDashboard = () => {
               onChange={(event) =>
                 setAttendanceForm((prev) => ({ ...prev, studentId: event.target.value }))
               }
+              disabled={!attendanceForm.timetableId}
             >
-              {students.length === 0 ? <option value="">No students</option> : null}
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name}
-                </option>
-              ))}
+              <option value="">-- Select Student --</option>
+              {students
+                .filter((student) => {
+                  if (!attendanceForm.timetableId) return false;
+                  const slot = timetable.find(t => t.id === Number(attendanceForm.timetableId));
+                  if (!slot) return false;
+                  return student.batch === slot.batch && (student.subjects || []).includes(slot.subject);
+                })
+                .map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {student.name}
+                  </option>
+                ))}
             </select>
-
-            <label htmlFor="attendance-date">Date</label>
-            <input
-              id="attendance-date"
-              className="input"
-              type="date"
-              value={attendanceForm.date}
-              onChange={(event) =>
-                setAttendanceForm((prev) => ({ ...prev, date: event.target.value }))
-              }
-            />
 
             <label htmlFor="attendance-status">Status</label>
             <select
@@ -450,6 +565,24 @@ const AdminDashboard = () => {
         <form className="form-grid" onSubmit={handleAddTimetable}>
           <select
             className="input"
+            value={timetableForm.batch}
+            onChange={(event) => {
+              const newBatch = event.target.value;
+              setTimetableForm((prev) => ({ 
+                ...prev, 
+                batch: newBatch,
+                subject: batchSubjectsMap[newBatch][0]
+              }));
+            }}
+          >
+            {batchOptions.map((batch) => (
+              <option key={batch} value={batch}>
+                {batch}
+              </option>
+            ))}
+          </select>
+          <select
+            className="input"
             value={timetableForm.day}
             onChange={(event) =>
               setTimetableForm((prev) => ({ ...prev, day: event.target.value }))
@@ -477,14 +610,19 @@ const AdminDashboard = () => {
               setTimetableForm((prev) => ({ ...prev, endTime: event.target.value }))
             }
           />
-          <input
+          <select
             className="input"
-            placeholder="Subject"
             value={timetableForm.subject}
             onChange={(event) =>
               setTimetableForm((prev) => ({ ...prev, subject: event.target.value }))
             }
-          />
+          >
+            {batchSubjectsMap[timetableForm.batch].map((sub) => (
+              <option key={sub} value={sub}>
+                {sub}
+              </option>
+            ))}
+          </select>
           <input
             className="input"
             placeholder="Teacher"
@@ -505,6 +643,7 @@ const AdminDashboard = () => {
             <table className="table">
               <thead>
                 <tr>
+                  <th>Batch</th>
                   <th>Day</th>
                   <th>Time</th>
                   <th>Subject</th>
@@ -515,6 +654,7 @@ const AdminDashboard = () => {
               <tbody>
                 {timetable.map((entry) => (
                   <tr key={entry.id}>
+                    <td>{entry.batch}</td>
                     <td>{entry.day}</td>
                     <td>
                       {entry.startTime} - {entry.endTime}
