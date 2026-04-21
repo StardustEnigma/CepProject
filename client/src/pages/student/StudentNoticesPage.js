@@ -11,7 +11,12 @@ const StudentNoticesPage = () => {
   useEffect(() => {
     const loadNotices = async () => {
       try {
-        const data = await apiFetch("/notices");
+        const studentId = localStorage.getItem("studentId");
+        if (!studentId) throw new Error("Student session not found");
+
+        const student = await apiFetch(`/students/${studentId}`);
+        const data = await apiFetch(`/notices?batch=${encodeURIComponent(student.batch)}`);
+        
         setNotices(data);
       } catch (requestError) {
         setError(requestError.message || "Unable to load notices.");

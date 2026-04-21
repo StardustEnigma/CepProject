@@ -7,7 +7,8 @@ const navItems = [
   { to: "/admin/students", label: "Students" },
   { to: "/admin/attendance", label: "Attendance" },
   { to: "/admin/notices", label: "Notices" },
-  { to: "/admin/timetable", label: "Timetable" }
+  { to: "/admin/timetable", label: "Timetable" },
+  { to: "/admin/results", label: "Results" }
 ];
 
 const AdminLayout = () => {

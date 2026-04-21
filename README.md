@@ -1,86 +1,245 @@
-# 🎓 Gurukul Academy — Coaching Center Management System
+# Gurukul Academy - Rural Coaching Center Management System
 
-A premium, modern, and highly responsive full-stack digital platform designed specifically for managing students, batches, fees, and daily operations at Gurukul Academy (Rural Coaching Center).
+Full-stack web platform for managing day-to-day operations of a coaching center.
+This README is written in report-ready format and can be directly reused in project documentation.
+The project is built with a social mission: supporting affordable education by making coaching center operations more efficient and accessible.
 
-![React](https://img.shields.io/badge/Frontend-React-61dafb?style=flat-square&logo=react)
-![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?style=flat-square&logo=node.js)
-![Express](https://img.shields.io/badge/Framework-Express.js-000000?style=flat-square&logo=express)
+## 1. Project Summary
 
----
+Gurukul Academy is a role-based coaching center management application with two portals:
 
-## 🌟 Key Features
+- Admin portal for student administration, attendance, notices, timetable, results management, and fee collection.
+- Student portal for viewing personal attendance, notices, timetable, test results, and fee records.
 
-### 👨‍💼 Admin Panel
-The admin dashboard is an all-in-one workstation to handle daily operations efficiently.
-* **Financial Dashboard**: Keep track of expected revenue, collected fees, and pending balances in real-time.
-* **Student Management**: Register students to specific batches (8th - 12th class) with customized total fee structures.
-* **Payment Processing**: Process student fees via Cash, UPI, or Card, and generate **instant PDF Fee Receipts** natively in the browser.
-* **WhatsApp Reminders**: Identify students with pending fees and instantly dispatch automated WhatsApp payment reminders with a single click.
-* **Class-wise Attendance**: Easily switch between batches to take daily attendance using rapid "tap-to-mark" functionality.
-* **Notice Board**: Broadcast important announcements directly to the student portal.
-* **Master Timetable**: Construct class-specific weekly schedules and flag custom "Extra Classes".
+The project currently runs as a monorepo with a React frontend and an Express backend, and it integrates heavily with WhatsApp for automated communication.
 
-### 👨‍🎓 Student Portal
-A private, mobile-optimized hub where students can track their own progress and administrative status.
-* **Performance Overview**: Track attendance percentages and pending fee records directly on the homepage.
-* **Instant Notifications**: The latest operational notices are displayed immediately on the homepage dashboard.
-* **Class Timetables**: View personalized schedules isolated specifically to the student's assigned batch.
-* **Action Center**: Review payment histories and access upcoming testing schedules (coming soon).
+## 2. Problem Statement
 
----
+Traditional coaching center operations are often managed manually using notebooks, WhatsApp chats, and spreadsheets. This causes:
 
-## 🎨 UI/UX Design System
-* **Fully Responsive**: Adapts seamlessly to 4K monitors, tablets, and tiny mobile screens.
-* **Mobile-First Experience**: Uses a fixed frosted-glass bottom navigation bar for mobile devices, mimicking native app experiences.
-* **Branded Theme**: Premium typography (Playfair Display + Poppins) with an aesthetic color palette tuned perfectly to Gurukul Academy's logo (Deep Royal Blue, Crimson, and Saffron Orange).
-* **Glassmorphism & Micro-animations**: Subtle UI hover states and gradient glowing cards make the dashboard feel incredibly snappy.
+- Fragmented records for attendance, fees, and test results.
+- Delay in communicating notices and results to parents.
+- Difficult financial tracking across batches.
+- No unified student-facing view of performance and dues.
 
----
+This system centralizes those workflows into a single web application while maintaining an active automated communication line via WhatsApp.
 
-## 🚀 Getting Started
+## 3. Objectives
 
-### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
+- Provide a secure login-based system for admin and students.
+- Digitize student records, attendance, notices, timetable, and test results.
+- Track fee collection and pending balances per student and per batch.
+- Offer a clean dashboard experience for both admin and student users.
+- Automate communication via WhatsApp for fee reminders, notices, test results, and welcome messages.
+- Support the cause of affordable education by reducing manual overhead and improving operational transparency.
 
-### Installation
+## 4. User Roles and Access
 
-1. Copy or clone this repository to your local machine.
-2. From the project root (using npm workspaces), install all dependencies:
-   ```bash
-   npm install
-   ```
+### 4.1 Admin Role
 
-### Running the Application
+- Login as center administrator.
+- View financial summary cards and batch-wise pending fee breakdown.
+- Add/delete students and trigger automated WhatsApp welcome messages.
+- Record fee payments, generate PDF receipts, and trigger WhatsApp fee reminders for pending dues.
+- Mark attendance by date and timetable slot.
+- Post notices and broadcast them to students via WhatsApp.
+- Manage test results (input marks/absences) and broadcast them via WhatsApp.
+- Add/delete timetable slots with an intuitive grid-based UI.
 
-To start the application for development, run the following command in the root folder:
+### 4.2 Student Role
 
+- Login with student name and password.
+- View personal dashboard with attendance rate and pending fees.
+- View attendance history and absence records.
+- View detailed test results and performance history.
+- View notices and announcements.
+- View timetable filtered to own batch/subjects using a card-based grid layout.
+- View fee summary and payment history.
+
+## 5. Module Status (Implemented vs Planned)
+
+| Module | Status | Notes |
+|---|---|---|
+| Authentication (Admin/Student) | Implemented | JWT-based login with role checks, bcrypt hashing |
+| Student Management | Implemented | Add/delete students, batch/subject assignment |
+| Fee Management | Implemented | Admin can record payments and download PDF receipts |
+| Attendance Management | Implemented | Slot-based marking with subject context |
+| Notice Management | Implemented | Admin publish, student view, WhatsApp broadcast |
+| Timetable Management | Implemented | Admin add/delete slots, student filtered view (Grid-based UI) |
+| Results Management | Implemented | Score tracking, absence tracking, WhatsApp broadcast |
+| Real WhatsApp Automation | Implemented | Fully integrated via `whatsapp-web.js` with customizable templates |
+| Database Persistence | Planned | Planning to use MongoDB Atlas |
+| Real Deployment | Planned | AWS EC2 (backend) and Vercel (frontend) planned |
+
+## 6. Technology Stack
+
+### 6.1 Frontend
+
+- React 18 (Create React App)
+- React Router DOM 6
+- Vanilla CSS (Custom modern styling, modern typography)
+- jsPDF and jspdf-autotable for receipt generation
+
+### 6.2 Backend
+
+- Node.js
+- Express.js
+- bcryptjs (password hashing)
+- jsonwebtoken (JWT auth)
+- whatsapp-web.js (Core WhatsApp client integration)
+- qrcode-terminal (for WhatsApp QR auth)
+- cors
+- dotenv
+
+### 6.3 Repository and Tooling
+
+- npm workspaces (root + client + server)
+- concurrently (run frontend and backend together)
+- nodemon (server dev mode)
+
+## 7. High-Level Architecture
+
+1. User interacts with React client in browser.
+2. Client calls Express REST API.
+3. Login API returns JWT token.
+4. Token is sent in Authorization header for protected APIs.
+5. Backend validates token and performs business logic.
+6. The Backend initializes a headless WhatsApp Web client for communication.
+7. Data is currently stored in in-memory arrays in server process.
+
+Logical flow:
+Browser (Admin/Student) -> React app -> Express API -> In-memory data store + WhatsApp Client
+
+## 8. Project Structure
+
+```text
+.
+|-- package.json
+|-- README.md
+|-- client/
+|   |-- package.json
+|   |-- public/
+|   `-- src/
+|       |-- components/
+|       |-- pages/
+|       |   |-- admin/     (Admin views: Students, Timetable, Notices, Results, etc.)
+|       |   `-- student/   (Student views: Timetable, Notices, Tests, Fees)
+|       `-- utils/api.js
+`-- server/
+      |-- package.json
+      |-- server.js
+      `-- whatsappClient.js
+```
+
+## 9. Core Backend Data Model (Current)
+
+The backend uses seeded in-memory arrays, structuring data to be easily ported to MongoDB.
+
+### 9.1 Student
+- id, name, password (bcrypt hash), phoneNumber
+- batch, subjects
+- feesTotal, feesPaid, payments array
+- attendance array (date, present, subject, timetableId)
+- whatsappEvents (tracks communication history)
+- Computed field: testResults (joined from Tests)
+
+### 9.2 Notice
+- id, title, content, batch, createdAt
+
+### 9.3 Timetable Entry
+- id, day, startTime, endTime, subject, teacher, batch, isExtraClass
+
+### 9.4 Test/Result
+- id, batch, subject, date, maxMarks
+- results array (studentId, marks, isAbsent)
+
+## 10. WhatsApp Integration Details
+
+The application natively connects to WhatsApp Multi-Device to send messages without needing a paid API like Twilio or official WhatsApp Cloud API.
+- **Client**: `whatsapp-web.js` running inside the Node.js backend.
+- **Authentication**: Admin scans a QR code generated in the backend console.
+- **Customizable Templates**: Admin can define custom text templates for Welcome, Fee Reminders, Test Results, and Notices (supporting `{{name}}`, `{{marks}}`, etc. variables).
+- **History Tracking**: All outgoing WhatsApp messages are logged in the student's profile for auditing.
+
+## 11. API Reference
+
+Base URL (local): `http://localhost:5000`
+
+### 11.1 Public Routes
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/login/admin` | Admin login |
+| POST | `/login/student` | Student login |
+
+### 11.2 Protected Routes (JWT Required)
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET/POST | `/students` | Manage students |
+| POST | `/students/:id/pay` | Record fee payment |
+| POST | `/students/:id/whatsapp/fee-reminder` | Send fee reminder WhatsApp |
+| POST | `/attendance` | Mark/update attendance |
+| GET/POST | `/notices` | List/Create notices |
+| POST | `/notices/:id/whatsapp` | Broadcast notice via WhatsApp |
+| GET/POST/DELETE | `/timetable` | Manage timetable |
+| GET/POST/DELETE | `/tests` | Manage test results |
+| POST | `/tests/:id/whatsapp` | Broadcast test results via WhatsApp |
+| GET/PUT | `/whatsapp/templates` | Manage WhatsApp message templates |
+
+## 12. Frontend Routing Map
+
+### 12.1 Admin Routes
+- `/admin` (Dashboard)
+- `/admin/students`
+- `/admin/attendance`
+- `/admin/notices`
+- `/admin/timetable`
+- `/admin/results`
+
+### 12.2 Student Routes
+- `/student` (Dashboard)
+- `/student/attendance`
+- `/student/notices`
+- `/student/timetable`
+- `/student/tests`
+- `/student/fees`
+
+## 13. Setup and Run Instructions
+
+### 13.1 Prerequisites
+- Node.js installed
+- npm installed
+
+### 13.2 Start Application
+From the repository root folder:
 ```bash
+npm install
 npm run dev
 ```
 
-This uses `concurrently` to boot both the Node.js server and the React frontend simultaneously:
-* **Frontend**: `http://localhost:3000`
-* **Backend API**: `http://localhost:5000`
+### 13.3 WhatsApp Linking
+- The backend console will log a QR code locally.
+- Scan the QR code with WhatsApp installed on a mobile device (Linked Devices). Note: A separate test WhatsApp account is highly recommended.
 
-> *Note: If you run `npm run dev` and wish to stop it, use `Ctrl + C`. This may throw an expected non-zero exit code in terminal.*
+## 14. Credentials for Seeded Data Demo
 
-### Default Credentials
-* **Global Admin Login**: `admin` / `admin123`
-* **Student Login**: Generated names (e.g., "Aarav Sharma" / `password123`). Check the Admin's Student Management list for exact student names.
+- **Admin login**:
+  - username: `admin`
+  - password: `admin123`
+- **Student login**:
+  - name: Pick a name from the admin student list (e.g. `Aarav Sharma`)
+  - password: `password123`
 
----
+## 15. Security and Auth Notes
+- Passwords are encrypted as bcrypt hashes in memory.
+- JWT tokens are required after login for protected APIs.
+- Role value (admin/student) is used for route-level protection in frontend.
+- Strict CORS rules enforce authorized origins in the backend.
 
-## 🏗️ Technical Architecture
-
-* **Frontend**: React.js (Create React App), React Router Dom v6, Vanilla CSS3 with Custom Properties (Tokens).
-* **PDF Utility**: `jspdf` used natively on the client side for receipt generation.
-* **Backend**: Express.js REST API returning standard JSON representations.
-* **Database**: Currently utilizes in-memory structured arrays (`server.js`) for lightning-fast prototyping. Easily swappable to MongoDB or PostgreSQL.
-
----
-
-## 🛣️ Roadmap & Planned Upgrades
-
-- [ ] **Automated WhatsApp Reminders Setup**: Fully wire the "Send Reminder" button to a WhatsApp Business API gateway or Twilio to push real messages to parents/students.
-- [ ] **Database Persistence**: Migrate the local mock arrays in `server.js` to a real NoSQL/SQL database.
-- [ ] **Test Module**: Finalize the interactive routing for the Student Tests page.
+## 16. Future Enhancements
+- Integrate MongoDB/PostgreSQL for persistent data.
+- Deploy to cloud (AWS EC2 + Vercel).
+- Add online student payment workflow (Stripe/Razorpay).
+- Add full role-based admin permissions and audit logs.
+- Add automated unit and integration tests.

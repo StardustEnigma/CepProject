@@ -23,7 +23,7 @@ const StudentHomePage = () => {
         const studentData = await apiFetch(`/students/${studentId}`);
         setStudent(studentData);
         
-        const noticesData = await apiFetch("/notices");
+        const noticesData = await apiFetch(`/notices?batch=${encodeURIComponent(studentData.batch)}`);
         // Only show the 2 most recent notices
         setLatestNotices(noticesData.slice(0, 2));
       } catch (requestError) {

@@ -4,6 +4,14 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const bcrypt = require("bcryptjs");
+const {
+  initializeWhatsAppClient,
+  sendWhatsAppText,
+  normalizeWhatsAppNumber,
+  isValidWhatsAppNumber,
+  getWhatsAppStatus,
+  resetWhatsAppClient
+} = require("./whatsappClient");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 
@@ -39,6 +47,7 @@ app.use(cors({
   }
 }));
 app.use(express.json());
+initializeWhatsAppClient();
 
 const ADMIN_CREDENTIALS = {
   username: "admin",
@@ -55,9 +64,22 @@ const batchSubjects = {
 };
 const firstNames = ["Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Krishna", "Ishaan", "Shaurya", "Priya", "Rohan", "Ananya", "Sneha", "Kavya", "Diya", "Isha", "Neha", "Pooja", "Rahul", "Aman", "Ravi", "Vikram", "Sunil", "Ankit", "Rohit", "Sachin", "Sushant", "Kiran", "Nisha"];
 const lastNames = ["Sharma", "Gupta", "Verma", "Singh", "Kumar", "Krishna", "Joshi", "Yadav", "Patel", "Desai", "Deshmukh", "Patil", "Iyer", "Rao", "Nair", "Pillai", "Chauhan", "Rajput", "Malhotra", "Kapoor"];
+const getSeedPhoneNumber = (seedId) => `91${(7000000000 + seedId).toString()}`;
+const defaultWhatsAppTemplates = {
+  welcome: "Welcome to Gurukul Academy, {{name}}! We are happy to have you with us.",
+  feeReminder: "Dear {{name}}, this is a gentle reminder that Rs. {{feesPending}} in tuition fees are currently pending at Gurukul Academy. Kindly complete your payment soon.",
+  testResult: "Test Result at Gurukul Academy\nSubject: {{subject}}\nDate: {{date}}\nStudent: {{name}}\nScore: {{marks}}/{{maxMarks}}\nStatus: {{status}}",
+  notice: "Notice from Gurukul Academy:\n\n*{{title}}*\n{{content}}"
+};
+
+let whatsappTemplates = {
+  ...defaultWhatsAppTemplates
+};
 
 let students = [];
 let studentIdCounter = 1;
+
+let tests = [];
 
 for (const batch of batchesList) {
   for (let i = 1; i <= 10; i++) {
@@ -76,6 +98,7 @@ for (const batch of batchesList) {
       id: studentIdCounter,
       name: `${randomFirstName} ${randomLastName}`,
       password: bcrypt.hashSync("password123", 10),
+      phoneNumber: getSeedPhoneNumber(studentIdCounter),
       batch: batch,
       subjects: batchSubjects[batch] || [],
       feesTotal: feesTotal,
@@ -96,6 +119,7 @@ let notices = [
     id: 1,
     title: "Welcome",
     content: "New batch starts from 10 April. Bring notebooks and ID card.",
+    batch: "All",
     createdAt: "2026-04-03"
   }
 ];
@@ -113,54 +137,75 @@ const dayOrder = {
 let timetable = [];
 let ttIdCounter = 1;
 const classDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const times = [
-  { start: "16:00", end: "17:00" },
+const times11_12 = [
+  { start: "15:00", end: "16:00" },
+  { start: "16:00", end: "17:00" }
+];
+const times8_10 = [
   { start: "17:00", end: "18:00" },
   { start: "18:00", end: "19:00" }
 ];
+
 // 8th class teachers
 const t8 = { Maths: "Bhaki maam", Science: "Shubham sir", SST: "Mowade sir", English: "Mowade sir" };
 // 9-12 teachers
 const tHigh = { Maths: "Akash sir", Physics: "Akash sir", Chemistry: "Shubham sir", Biology: "Shubham sir" };
 
 for (const day of classDays) {
-  // 8th class
-  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Maths", teacher: t8.Maths, batch: "8th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Science", teacher: t8.Science, batch: "8th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "SST", teacher: t8.SST, batch: "8th class", isExtraClass: false });
+  // --- 11th and 12th class (15:00 to 17:00) ---
+  // Slot 1: 15:00 - 16:00
+  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[0].start, endTime: times11_12[0].end, subject: "Maths", teacher: tHigh.Maths, batch: "11th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[0].start, endTime: times11_12[0].end, subject: "Biology", teacher: tHigh.Biology, batch: "12th class", isExtraClass: false });
+  
+  // Slot 2: 16:00 - 17:00
+  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[1].start, endTime: times11_12[1].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "11th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[1].start, endTime: times11_12[1].end, subject: "Physics", teacher: tHigh.Physics, batch: "12th class", isExtraClass: false });
 
-  // 9th class
-  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Physics", teacher: tHigh.Physics, batch: "9th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "9th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Maths", teacher: tHigh.Maths, batch: "9th class", isExtraClass: false });
+  // --- 8th, 9th, and 10th class (17:00 to 19:00) ---
+  // Slot 1: 17:00 - 18:00
+  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[0].start, endTime: times8_10[0].end, subject: "Maths", teacher: t8.Maths, batch: "8th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[0].start, endTime: times8_10[0].end, subject: "Physics", teacher: tHigh.Physics, batch: "9th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[0].start, endTime: times8_10[0].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "10th class", isExtraClass: false });
 
-  // 10th class
-  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "10th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Physics", teacher: tHigh.Physics, batch: "10th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Biology", teacher: tHigh.Biology, batch: "10th class", isExtraClass: false });
-
-  // 11th class
-  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Biology", teacher: tHigh.Biology, batch: "11th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Maths", teacher: tHigh.Maths, batch: "11th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "11th class", isExtraClass: false });
-
-  // 12th class
-  timetable.push({ id: ttIdCounter++, day, startTime: times[0].start, endTime: times[0].end, subject: "Maths", teacher: tHigh.Maths, batch: "12th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[1].start, endTime: times[1].end, subject: "Biology", teacher: tHigh.Biology, batch: "12th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times[2].start, endTime: times[2].end, subject: "Physics", teacher: tHigh.Physics, batch: "12th class", isExtraClass: false });
+  // Slot 2: 18:00 - 19:00
+  // Note: SST (Mowade sir) is chosen to prevent overlap with Shubham sir teaching Biology for 9th.
+  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[1].start, endTime: times8_10[1].end, subject: "SST", teacher: t8.SST, batch: "8th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[1].start, endTime: times8_10[1].end, subject: "Biology", teacher: tHigh.Biology, batch: "9th class", isExtraClass: false });
+  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[1].start, endTime: times8_10[1].end, subject: "Maths", teacher: tHigh.Maths, batch: "10th class", isExtraClass: false });
 }
 
-const sanitizeStudent = (student) => ({
-  id: student.id,
-  name: student.name,
-  batch: student.batch || "N/A",
-  subjects: student.subjects || [],
-  feesTotal: student.feesTotal || 0,
-  feesPaid: student.feesPaid || 0,
-  payments: student.payments || [],
-  attendance: student.attendance,
-  feesPending: (student.feesTotal || 0) - (student.feesPaid || 0)
-});
+const sanitizeStudent = (student) => {
+  const studentTests = tests.filter(t => t.batch === student.batch).map(t => {
+    const res = t.results.find(r => r.studentId === student.id) || null;
+    return {
+      id: t.id,
+      subject: t.subject,
+      date: t.date,
+      maxMarks: t.maxMarks,
+      marks: res ? res.marks : null,
+      isAbsent: res ? res.isAbsent : null,
+      hasResult: !!res
+    };
+  });
+
+  return {
+    id: student.id,
+    name: student.name,
+    phoneNumber: student.phoneNumber || "",
+    batch: student.batch || "N/A",
+    subjects: student.subjects || [],
+    feesTotal: student.feesTotal || 0,
+    feesPaid: student.feesPaid || 0,
+    payments: student.payments || [],
+    attendance: student.attendance,
+    feesPending: (student.feesTotal || 0) - (student.feesPaid || 0),
+    lastWhatsAppStatus: student.lastWhatsAppStatus || null,
+    lastWhatsAppType: student.lastWhatsAppType || null,
+    lastWhatsAppAt: student.lastWhatsAppAt || null,
+    lastWhatsAppInfo: student.lastWhatsAppInfo || null,
+    testResults: studentTests
+  };
+};
 
 const getNextId = (items) => {
   if (items.length === 0) {
@@ -182,6 +227,78 @@ const sortTimetable = (entries) =>
 
     return a.startTime.localeCompare(b.startTime);
   });
+
+const getStudentFeesPending = (student) =>
+  Math.max(0, Number(student.feesTotal || 0) - Number(student.feesPaid || 0));
+
+const renderTemplate = (template, context) =>
+  String(template || "").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
+    if (context[key] == null) {
+      return "";
+    }
+
+    return String(context[key]);
+  });
+
+const getStudentTemplateContext = (student) => ({
+  name: student.name,
+  batch: student.batch,
+  phoneNumber: student.phoneNumber,
+  feesTotal: Number(student.feesTotal || 0),
+  feesPaid: Number(student.feesPaid || 0),
+  feesPending: getStudentFeesPending(student)
+});
+
+const getTestTemplateContext = (student, test, result) => ({
+  name: student.name,
+  batch: student.batch,
+  subject: test.subject,
+  date: test.date,
+  maxMarks: test.maxMarks,
+  marks: result.isAbsent ? 0 : result.marks,
+  status: result.isAbsent ? "Absent" : "Present"
+});
+
+const getNoticeTemplateContext = (student, notice) => ({
+  name: student.name,
+  batch: student.batch,
+  title: notice.title,
+  content: notice.content
+});
+
+const updateWhatsAppDeliveryOnStudent = (student, type, delivery, text) => {
+  const event = {
+    id: Date.now(),
+    type,
+    sent: Boolean(delivery.sent),
+    info: delivery.message,
+    at: new Date().toISOString(),
+    text
+  };
+
+  student.whatsappEvents = student.whatsappEvents || [];
+  student.whatsappEvents.unshift(event);
+  if (student.whatsappEvents.length > 20) {
+    student.whatsappEvents = student.whatsappEvents.slice(0, 20);
+  }
+
+  student.lastWhatsAppStatus = event.sent ? "sent" : "failed";
+  student.lastWhatsAppType = type;
+  student.lastWhatsAppAt = event.at;
+  student.lastWhatsAppInfo = event.info;
+};
+
+const sendTemplatedStudentWhatsApp = async (student, type, template) => {
+  const context = getStudentTemplateContext(student);
+  const messageText = renderTemplate(template, context);
+  const delivery = await sendWhatsAppText(student.phoneNumber, messageText);
+  updateWhatsAppDeliveryOnStudent(student, type, delivery, messageText);
+
+  return {
+    delivery,
+    messageText
+  };
+};
 
 app.get("/", (req, res) => {
   res.json({
@@ -240,6 +357,66 @@ app.post("/login/student", (req, res) => {
 
 app.use(authenticateToken);
 
+app.get("/whatsapp/status", (req, res) => {
+  res.json(getWhatsAppStatus());
+});
+
+app.post("/whatsapp/reset", async (req, res) => {
+  const status = await resetWhatsAppClient();
+  res.json({ message: "WhatsApp client reset requested.", status });
+});
+
+app.get("/whatsapp/templates", (req, res) => {
+  res.json(whatsappTemplates);
+});
+
+app.put("/whatsapp/templates", (req, res) => {
+  const { welcome, feeReminder } = req.body;
+
+  if (welcome != null) {
+    if (!String(welcome).trim()) {
+      return res.status(400).json({
+        message: "Welcome template cannot be empty"
+      });
+    }
+    whatsappTemplates.welcome = String(welcome).trim();
+  }
+
+  if (feeReminder != null) {
+    if (!String(feeReminder).trim()) {
+      return res.status(400).json({
+        message: "Fee reminder template cannot be empty"
+      });
+    }
+    whatsappTemplates.feeReminder = String(feeReminder).trim();
+  }
+
+  const { testResult } = req.body;
+  if (testResult != null) {
+    if (!String(testResult).trim()) {
+      return res.status(400).json({
+        message: "Test result template cannot be empty"
+      });
+    }
+    whatsappTemplates.testResult = String(testResult).trim();
+  }
+
+  const { notice } = req.body;
+  if (notice != null) {
+    if (!String(notice).trim()) {
+      return res.status(400).json({
+        message: "Notice template cannot be empty"
+      });
+    }
+    whatsappTemplates.notice = String(notice).trim();
+  }
+
+  return res.json({
+    message: "WhatsApp templates updated successfully",
+    templates: whatsappTemplates
+  });
+});
+
 app.get("/students", (req, res) => {
   const response = students.map(sanitizeStudent);
   res.json(response);
@@ -258,12 +435,19 @@ app.get("/students/:id", (req, res) => {
   return res.json(sanitizeStudent(student));
 });
 
-app.post("/students", (req, res) => {
-  const { name, password, batch, subjects, feesTotal } = req.body;
+app.post("/students", async (req, res) => {
+  const { name, password, phoneNumber, batch, subjects, feesTotal } = req.body;
+  const normalizedPhoneNumber = normalizeWhatsAppNumber(phoneNumber);
 
-  if (!name || !String(name).trim() || !password || !String(password).trim() || !batch || feesTotal == null) {
+  if (!name || !String(name).trim() || !password || !String(password).trim() || !batch || feesTotal == null || !normalizedPhoneNumber) {
     return res.status(400).json({
-      message: "Name, password, batch, and feesTotal are required"
+      message: "Name, password, phoneNumber, batch, and feesTotal are required"
+    });
+  }
+
+  if (!isValidWhatsAppNumber(normalizedPhoneNumber)) {
+    return res.status(400).json({
+      message: "Invalid phone number. Use 10 to 15 digits with country code if needed."
     });
   }
 
@@ -272,9 +456,19 @@ app.post("/students", (req, res) => {
       student.name.toLowerCase() === String(name).trim().toLowerCase()
   );
 
+  const phoneAlreadyExists = students.some(
+    (student) => student.phoneNumber === normalizedPhoneNumber
+  );
+
   if (alreadyExists) {
     return res.status(409).json({
       message: "Student with this name already exists"
+    });
+  }
+
+  if (phoneAlreadyExists) {
+    return res.status(409).json({
+      message: "Student with this phone number already exists"
     });
   }
 
@@ -282,19 +476,68 @@ app.post("/students", (req, res) => {
     id: getNextId(students),
     name: String(name).trim(),
     password: bcrypt.hashSync(String(password).trim(), 10),
+    phoneNumber: normalizedPhoneNumber,
     batch: String(batch).trim(),
     subjects: Array.isArray(subjects) ? subjects : [],
     feesTotal: Number(feesTotal),
     feesPaid: 0,
     payments: [],
-    attendance: []
+    attendance: [],
+    whatsappEvents: [],
+    lastWhatsAppStatus: null,
+    lastWhatsAppType: null,
+    lastWhatsAppAt: null,
+    lastWhatsAppInfo: null
   };
 
   students.push(newStudent);
 
+  const { delivery } = await sendTemplatedStudentWhatsApp(
+    newStudent,
+    "welcome",
+    whatsappTemplates.welcome
+  );
+  const message = delivery.sent
+    ? "Student added successfully and welcome WhatsApp message sent."
+    : "Student added successfully, but welcome WhatsApp message is pending.";
+
   return res.status(201).json({
-    message: "Student added successfully",
-    student: sanitizeStudent(newStudent)
+    message,
+    student: sanitizeStudent(newStudent),
+    whatsapp: delivery
+  });
+});
+
+app.post("/students/:id/whatsapp/fee-reminder", async (req, res) => {
+  const studentId = parseId(req.params.id);
+  const student = students.find((item) => item.id === studentId);
+
+  if (!student) {
+    return res.status(404).json({
+      message: "Student not found"
+    });
+  }
+
+  const feesPending = getStudentFeesPending(student);
+  if (feesPending <= 0) {
+    return res.status(400).json({
+      message: "No pending fees for this student"
+    });
+  }
+
+  const { delivery, messageText } = await sendTemplatedStudentWhatsApp(
+    student,
+    "fee-reminder",
+    whatsappTemplates.feeReminder
+  );
+
+  return res.json({
+    message: delivery.sent
+      ? "Fee reminder WhatsApp message sent successfully"
+      : "Fee reminder could not be delivered right now",
+    whatsapp: delivery,
+    preview: messageText,
+    student: sanitizeStudent(student)
   });
 });
 
@@ -389,11 +632,16 @@ app.post("/attendance", (req, res) => {
 });
 
 app.get("/notices", (req, res) => {
+  const { batch } = req.query;
+  if (batch && batch !== "All" && typeof batch === "string") {
+    const filtered = notices.filter(n => n.batch === "All" || n.batch === batch);
+    return res.json(filtered);
+  }
   res.json(notices);
 });
 
 app.post("/notices", (req, res) => {
-  const { title, content } = req.body;
+  const { title, content, batch } = req.body;
 
   if (!title || !String(title).trim() || !content || !String(content).trim()) {
     return res.status(400).json({
@@ -405,6 +653,7 @@ app.post("/notices", (req, res) => {
     id: getNextId(notices),
     title: String(title).trim(),
     content: String(content).trim(),
+    batch: batch ? String(batch).trim() : "All",
     createdAt: new Date().toISOString().slice(0, 10)
   };
 
@@ -413,6 +662,37 @@ app.post("/notices", (req, res) => {
   return res.status(201).json({
     message: "Notice posted successfully",
     notice
+  });
+});
+
+app.post("/notices/:id/whatsapp", async (req, res) => {
+  const noticeId = parseId(req.params.id);
+  const notice = notices.find(n => n.id === noticeId);
+
+  if (!notice) {
+    return res.status(404).json({ message: "Notice not found" });
+  }
+
+  const targetStudents = notice.batch === "All" 
+    ? students 
+    : students.filter(s => s.batch === notice.batch);
+
+  const deliveries = [];
+
+  for (const student of targetStudents) {
+    if (!student.phoneNumber) continue;
+
+    const context = getNoticeTemplateContext(student, notice);
+    const messageText = renderTemplate(whatsappTemplates.notice, context);
+    const delivery = await sendWhatsAppText(student.phoneNumber, messageText);
+
+    updateWhatsAppDeliveryOnStudent(student, "notice", delivery, messageText);
+    deliveries.push({ studentId: student.id, name: student.name, delivery });
+  }
+
+  return res.json({
+    message: "Notice queued for WhatsApp broadcast",
+    deliveries
   });
 });
 
@@ -514,6 +794,78 @@ app.delete("/timetable/:id", (req, res) => {
     message: "Timetable entry deleted successfully",
     timetable: deletedEntry
   });
+});
+
+app.get("/tests", (req, res) => {
+  res.json(tests);
+});
+
+app.post("/tests", (req, res) => {
+  const { batch, subject, date, maxMarks, results } = req.body;
+
+  if (!batch || !subject || !date || typeof maxMarks !== 'number' || !Array.isArray(results)) {
+    return res.status(400).json({ message: "Invalid test data. Required: batch, subject, date, maxMarks, results array." });
+  }
+
+  const test = {
+    id: getNextId(tests),
+    batch: String(batch).trim(),
+    subject: String(subject).trim(),
+    date: String(date).trim(),
+    maxMarks: maxMarks,
+    results: results.map(r => ({
+      studentId: parseId(r.studentId),
+      marks: Number(r.marks || 0),
+      isAbsent: Boolean(r.isAbsent)
+    }))
+  };
+
+  tests.unshift(test);
+
+  return res.status(201).json({
+    message: "Test created successfully",
+    test
+  });
+});
+
+app.post("/tests/:id/whatsapp", async (req, res) => {
+  const testId = parseId(req.params.id);
+  const test = tests.find(t => t.id === testId);
+
+  if (!test) {
+    return res.status(404).json({ message: "Test not found" });
+  }
+
+  const deliveries = [];
+  
+  for (const result of test.results) {
+    const student = students.find(s => s.id === result.studentId);
+    if (!student || !student.phoneNumber) continue;
+
+    const context = getTestTemplateContext(student, test, result);
+    const messageText = renderTemplate(whatsappTemplates.testResult, context);
+    const delivery = await sendWhatsAppText(student.phoneNumber, messageText);
+    
+    updateWhatsAppDeliveryOnStudent(student, "test-result", delivery, messageText);
+    deliveries.push({ studentId: student.id, name: student.name, delivery });
+  }
+
+  return res.json({
+    message: "Test results queued for WhatsApp broadcast",
+    deliveries
+  });
+});
+
+app.delete("/tests/:id", (req, res) => {
+  const testId = parseId(req.params.id);
+  const testIndex = tests.findIndex(t => t.id === testId);
+
+  if (testIndex < 0) {
+    return res.status(404).json({ message: "Test not found" });
+  }
+
+  const [deletedTest] = tests.splice(testIndex, 1);
+  return res.json({ message: "Test deleted successfully", test: deletedTest });
 });
 
 // --- Serve Frontend ---

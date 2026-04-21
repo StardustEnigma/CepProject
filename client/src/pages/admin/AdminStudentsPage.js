@@ -14,9 +14,16 @@ const batchSubjectsMap = {
 
 const AdminStudentsPage = () => {
   const [students, setStudents] = useState([]);
+  const [whatsappStatus, setWhatsappStatus] = useState(null);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+  const [isResettingWhatsApp, setIsResettingWhatsApp] = useState(false);
+  const [templateForm, setTemplateForm] = useState({ welcome: "", feeReminder: "" });
+  const [isSavingTemplates, setIsSavingTemplates] = useState(false);
+  const [sendingReminderForId, setSendingReminderForId] = useState(null);
   const [studentForm, setStudentForm] = useState({ 
     name: "", 
     password: "", 
+    phoneNumber: "",
     batch: "8th class", 
     subjects: ["Maths", "Science", "English", "SST"],
     feesTotal: 10000 
@@ -31,11 +38,31 @@ const AdminStudentsPage = () => {
     setStudents(data);
   };
 
+  const loadWhatsAppStatus = async () => {
+    const statusData = await apiFetch("/whatsapp/status");
+    setWhatsappStatus(statusData);
+    return statusData;
+  };
+
+  const loadWhatsAppTemplates = async () => {
+    const templateData = await apiFetch("/whatsapp/templates");
+    setTemplateForm({
+      welcome: templateData.welcome || "",
+      feeReminder: templateData.feeReminder || ""
+    });
+
+    return templateData;
+  };
+
+  const loadWhatsAppMeta = async () => {
+    await Promise.all([loadWhatsAppStatus(), loadWhatsAppTemplates()]);
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
         setError("");
-        await loadStudents();
+        await Promise.all([loadStudents(), loadWhatsAppMeta()]);
       } catch (requestError) {
         setError(requestError.message || "Unable to load students.");
       } finally {
@@ -69,20 +96,26 @@ const AdminStudentsPage = () => {
     event.preventDefault();
     clearFlash();
 
+    if (!studentForm.phoneNumber.trim()) {
+      setError("Phone number is required.");
+      return;
+    }
+
     try {
-      await apiFetch("/students", {
+      const response = await apiFetch("/students", {
         method: "POST",
         body: JSON.stringify(studentForm)
       });
       setStudentForm({ 
         name: "", 
         password: "", 
+        phoneNumber: "",
         batch: "8th class", 
         subjects: batchSubjectsMap["8th class"],
         feesTotal: 10000 
       });
       await loadStudents();
-      setSuccess("Student added successfully.");
+      setSuccess(response.message || "Student added successfully.");
     } catch (requestError) {
       setError(requestError.message || "Unable to add student.");
     }
@@ -107,10 +140,96 @@ const AdminStudentsPage = () => {
     }
   };
 
-  const handleSendReminder = (studentName, fees) => {
-    window.alert(
-      `[WhatsApp Automation Triggered]\n\nAutomated message scheduled for ${studentName}:\n"Dear ${studentName}, this is a gentle reminder that ₹${fees} in tuition fees are currently pending at Gurukul Academy. Kindly complete your payment soon."`
-    );
+  const handleSendReminder = async (studentId) => {
+    clearFlash();
+    setSendingReminderForId(studentId);
+
+    try {
+      const response = await apiFetch(`/students/${studentId}/whatsapp/fee-reminder`, {
+        method: "POST"
+      });
+
+      await Promise.all([loadStudents(), loadWhatsAppStatus()]);
+      setSuccess(response.message || "Reminder processed.");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to send WhatsApp reminder.");
+    } finally {
+      setSendingReminderForId(null);
+    }
+  };
+
+  const handleSaveTemplates = async (event) => {
+    event.preventDefault();
+    clearFlash();
+
+    if (!templateForm.welcome.trim() || !templateForm.feeReminder.trim()) {
+      setError("Welcome and fee reminder templates are required.");
+      return;
+    }
+
+    setIsSavingTemplates(true);
+    try {
+      const response = await apiFetch("/whatsapp/templates", {
+        method: "PUT",
+        body: JSON.stringify(templateForm)
+      });
+
+      if (response.templates) {
+        setTemplateForm({
+          welcome: response.templates.welcome || "",
+          feeReminder: response.templates.feeReminder || ""
+        });
+      }
+
+      await loadWhatsAppMeta();
+      setSuccess(response.message || "WhatsApp templates updated.");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to update WhatsApp templates.");
+    } finally {
+      setIsSavingTemplates(false);
+    }
+  };
+
+  const handleReloadTemplates = async () => {
+    clearFlash();
+    try {
+      await loadWhatsAppMeta();
+      setSuccess("Loaded latest saved WhatsApp templates.");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to load WhatsApp templates.");
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    clearFlash();
+    setIsRefreshingStatus(true);
+
+    try {
+      await loadWhatsAppStatus();
+      setSuccess("WhatsApp status refreshed.");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to refresh WhatsApp status.");
+    } finally {
+      setIsRefreshingStatus(false);
+    }
+  };
+
+  const handleResetWhatsApp = async () => {
+    const confirmed = window.confirm("Are you sure you want to reset the WhatsApp client? This will log out any linked device and require an immediate re-scan of the QR code.");
+    if (!confirmed) return;
+    
+    clearFlash();
+    setIsResettingWhatsApp(true);
+    setWhatsappStatus(null);
+    try {
+      await apiFetch("/whatsapp/reset", { method: "POST" });
+      setSuccess("WhatsApp client reset. Waiting for new QR code...");
+      setTimeout(() => loadWhatsAppStatus(), 2000);
+    } catch (err) {
+      setError(err.message || "Unable to reset WhatsApp.");
+    } finally {
+      setIsResettingWhatsApp(false);
+    }
   };
 
   const handlePayFeeSubmit = async (event) => {
@@ -163,6 +282,82 @@ const AdminStudentsPage = () => {
       {error ? <p className="alert alert-error">{error}</p> : null}
       {success ? <p className="alert alert-success">{success}</p> : null}
 
+      <section className="panel" style={{ marginBottom: "16px" }}>
+        <h3 style={{ marginTop: 0 }}>WhatsApp Automation</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Status: {whatsappStatus?.ready ? "Connected" : "Not Connected"}
+          {whatsappStatus?.enabled === false ? " (Disabled by environment)" : ""}
+        </p>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
+          <button className="button button-secondary" type="button" onClick={handleRefreshStatus} disabled={isRefreshingStatus}>
+            {isRefreshingStatus ? "Refreshing..." : "Refresh WhatsApp Status"}
+          </button>
+          <button className="button button-danger" type="button" onClick={handleResetWhatsApp} disabled={isResettingWhatsApp}>
+            {isResettingWhatsApp ? "Resetting..." : "Reset / Re-authenticate WhatsApp"}
+          </button>
+        </div>
+        {whatsappStatus?.lastError ? (
+          <p className="alert alert-error" style={{ marginTop: "8px" }}>
+            {whatsappStatus.lastError}
+          </p>
+        ) : null}
+
+        {whatsappStatus?.enabled !== false && !whatsappStatus?.ready ? (
+          whatsappStatus?.qrCodeDataUrl ? (
+            <div className="wa-qr-panel">
+              <p className="muted wa-qr-text">Scan this code from WhatsApp Linked Devices.</p>
+              <img src={whatsappStatus.qrCodeDataUrl} alt="WhatsApp login QR code" className="wa-qr-image" />
+              {whatsappStatus?.qrUpdatedAt ? (
+                <p className="muted wa-qr-meta">
+                  Updated: {new Date(whatsappStatus.qrUpdatedAt).toLocaleString()}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="muted" style={{ marginTop: "8px" }}>
+              QR code is not available yet. Refresh status in a few seconds.
+            </p>
+          )
+        ) : null}
+
+        <form className="form-stack" onSubmit={handleSaveTemplates}>
+          <label htmlFor="wa-welcome-template">Welcome Message Template</label>
+          <textarea
+            id="wa-welcome-template"
+            className="input textarea"
+            value={templateForm.welcome}
+            onChange={(event) =>
+              setTemplateForm((prev) => ({ ...prev, welcome: event.target.value }))
+            }
+            placeholder="Welcome template"
+          />
+
+          <label htmlFor="wa-fee-template">Fee Reminder Template</label>
+          <textarea
+            id="wa-fee-template"
+            className="input textarea"
+            value={templateForm.feeReminder}
+            onChange={(event) =>
+              setTemplateForm((prev) => ({ ...prev, feeReminder: event.target.value }))
+            }
+            placeholder="Fee reminder template"
+          />
+
+          <p className="muted" style={{ marginTop: "4px" }}>
+            Available placeholders: <code>{"{{name}}"}</code>, <code>{"{{batch}}"}</code>, <code>{"{{feesPending}}"}</code>, <code>{"{{feesTotal}}"}</code>, <code>{"{{feesPaid}}"}</code>, <code>{"{{phoneNumber}}"}</code>
+          </p>
+
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <button className="button" type="submit" disabled={isSavingTemplates}>
+              {isSavingTemplates ? "Saving..." : "Save WhatsApp Templates"}
+            </button>
+            <button className="button button-secondary" type="button" onClick={handleReloadTemplates}>
+              Reload Saved Templates
+            </button>
+          </div>
+        </form>
+      </section>
+
       <form className="form-grid" onSubmit={handleAddStudent}>
         <input
           className="input"
@@ -179,6 +374,14 @@ const AdminStudentsPage = () => {
           value={studentForm.password}
           onChange={(event) =>
             setStudentForm((prev) => ({ ...prev, password: event.target.value }))
+          }
+        />
+        <input
+          className="input"
+          placeholder="Phone Number (e.g. 9876543210 or 919876543210)"
+          value={studentForm.phoneNumber}
+          onChange={(event) =>
+            setStudentForm((prev) => ({ ...prev, phoneNumber: event.target.value }))
           }
         />
         <select
@@ -275,10 +478,12 @@ const AdminStudentsPage = () => {
               <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Phone</th>
                 <th>Batch & Subjects</th>
                 <th>Attendance</th>
                 <th>Total Fees</th>
                 <th>Fees Pending</th>
+                <th>WA Status</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -287,6 +492,7 @@ const AdminStudentsPage = () => {
                 <tr key={student.id}>
                   <td>{student.id}</td>
                   <td>{student.name}</td>
+                  <td>{student.phoneNumber || "-"}</td>
                   <td>
                     <div><strong>{student.batch}</strong></div>
                     <div className="muted" style={{ fontSize: "0.85em" }}>{student.subjects?.join(", ")}</div>
@@ -296,6 +502,27 @@ const AdminStudentsPage = () => {
                   </td>
                   <td>₹{student.feesTotal}</td>
                   <td>₹{student.feesPending}</td>
+                  <td>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: student.lastWhatsAppStatus === "sent" ? "#2e7d32" : "#c62828"
+                      }}
+                    >
+                      {student.lastWhatsAppStatus ? student.lastWhatsAppStatus.toUpperCase() : "-"}
+                    </div>
+                    <div className="muted" style={{ fontSize: "0.8rem" }}>
+                      {student.lastWhatsAppType || "No message yet"}
+                    </div>
+                    <div className="muted" style={{ fontSize: "0.78rem" }}>
+                      {student.lastWhatsAppAt ? new Date(student.lastWhatsAppAt).toLocaleString() : ""}
+                    </div>
+                    {student.lastWhatsAppStatus === "failed" && student.lastWhatsAppInfo ? (
+                      <div style={{ color: "#c62828", fontSize: "0.78rem", marginTop: "2px" }}>
+                        {student.lastWhatsAppInfo}
+                      </div>
+                    ) : null}
+                  </td>
                   <td>
                     <button
                       type="button"
@@ -308,11 +535,12 @@ const AdminStudentsPage = () => {
                     {student.feesPending > 0 && (
                       <button
                         type="button"
+                        disabled={sendingReminderForId === student.id}
                         className="button"
                         style={{ marginRight: '6px', marginBottom: '4px', background: 'linear-gradient(135deg, #128C7E, #075E54)', color: 'white' }}
-                        onClick={() => handleSendReminder(student.name, student.feesPending)}
+                        onClick={() => handleSendReminder(student.id)}
                       >
-                        WhatsApp Reminder
+                        {sendingReminderForId === student.id ? "Sending..." : "WhatsApp Reminder"}
                       </button>
                     )}
                     <button

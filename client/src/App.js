@@ -8,6 +8,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminNoticesPage from "./pages/admin/AdminNoticesPage";
 import AdminStudentsPage from "./pages/admin/AdminStudentsPage";
 import AdminTimetablePage from "./pages/admin/AdminTimetablePage";
+import AdminResultsPage from "./pages/admin/AdminResultsPage";
 import StudentAttendancePage from "./pages/student/StudentAttendancePage";
 import StudentFeesPage from "./pages/student/StudentFeesPage";
 import StudentHomePage from "./pages/student/StudentHomePage";
@@ -48,6 +49,7 @@ function App() {
         <Route path="attendance" element={<AdminAttendancePage />} />
         <Route path="notices" element={<AdminNoticesPage />} />
         <Route path="timetable" element={<AdminTimetablePage />} />
+        <Route path="results" element={<AdminResultsPage />} />
       </Route>
       <Route
         path="/student"
