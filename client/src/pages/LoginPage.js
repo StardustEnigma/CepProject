@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../utils/api";
 import logo from "../logo.webp";
 
 const LoginPage = () => {
@@ -34,28 +35,10 @@ const LoginPage = () => {
 
     try {
       setIsLoading(true);
-      const response = await fetch(endpoint, {
+      const data = await apiFetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify(payload)
       });
-
-      let data = {};
-      const rawResponse = await response.text();
-
-      if (rawResponse) {
-        try {
-          data = JSON.parse(rawResponse);
-        } catch {
-          throw new Error("Unable to reach the server. Please ensure backend is running.");
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
 
       localStorage.setItem("token", data.token);
 
