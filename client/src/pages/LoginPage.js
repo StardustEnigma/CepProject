@@ -102,31 +102,37 @@ const LoginPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="form-stack">
-          <label htmlFor="identifier">
-            {mode === "admin" ? "Username" : "Student Name"}
-          </label>
-          <input
-            id="identifier"
-            className="input"
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-            placeholder={mode === "admin" ? "Enter admin username" : "Enter your name"}
-          />
+          <div>
+            <label htmlFor="identifier">
+              {mode === "admin" ? "Username" : "Student Name"}
+            </label>
+            <input
+              id="identifier"
+              className="input"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              placeholder={mode === "admin" ? "Enter admin username" : "Enter your name"}
+              autoComplete="username"
+            />
+          </div>
 
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            className="input"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter password"
-          />
+          <div>
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              className="input"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Enter password"
+              autoComplete="current-password"
+            />
+          </div>
 
           {error ? <p className="alert alert-error">{error}</p> : null}
 
-          <button type="submit" className="button" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
+          <button type="submit" className="button" disabled={isLoading} style={{ width: '100%', justifyContent: 'center', padding: '0.75rem' }}>
+            {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 

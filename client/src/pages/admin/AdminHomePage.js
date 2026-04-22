@@ -68,51 +68,55 @@ const AdminHomePage = () => {
   return (
     <div className="admin-page">
       <h2>Admin Overview</h2>
-      <p className="muted">Manage your coaching center efficiently from here.</p>
+      <p className="muted" style={{ marginTop: '-0.5rem' }}>Manage your coaching center efficiently from here.</p>
 
-      <div className="quick-grid">
+      <div className="quick-grid stagger">
         {cards.map((card) => (
           <article key={card.to} className="quick-card">
             <h3>{card.title}</h3>
             <p>{card.description}</p>
             <Link className="button" to={card.to}>
-              Open →
+              Open
             </Link>
           </article>
         ))}
       </div>
 
-      <h2 style={{ marginTop: '2rem' }}>Financial Dashboard</h2>
+      <h2 style={{ marginTop: '1.5rem' }}>Financial Dashboard</h2>
+
       {isLoading ? (
         <p className="loading-text">Loading insights...</p>
       ) : (
         <>
-          <div className="quick-grid">
-            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #fff3e0, #ffe0b2)', borderColor: '#ffcc80' }}>
-              <h3 style={{ color: '#e65100' }}>Total Students</h3>
-              <p className="stat-value" style={{ color: '#bf360c' }}>{totalStudents}</p>
-              <p style={{ fontSize: '0.82rem', color: '#e65100' }}>Across all batches</p>
+          <div className="quick-grid stagger">
+            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #fff5eb, #ffe8d4)', borderColor: '#ffd0a0' }}>
+              <h3 style={{ color: '#c44a00' }}>Total Students</h3>
+              <p className="stat-value" style={{ color: '#9c3700' }}>{totalStudents}</p>
+              <p className="stat-detail" style={{ color: '#c44a00' }}>Across all batches</p>
             </article>
-            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #fff8e1, #ffecb3)', borderColor: '#ffe082' }}>
-              <h3 style={{ color: '#f57f17' }}>Expected Revenue</h3>
-              <p className="stat-value" style={{ color: '#e65100' }}>₹{expectedFees.toLocaleString()}</p>
-              <p style={{ fontSize: '0.82rem', color: '#f57f17' }}>Total fees across students</p>
+            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #fef9e7, #fef0c7)', borderColor: '#fce18a' }}>
+              <h3 style={{ color: '#b8860b' }}>Expected Revenue</h3>
+              <p className="stat-value" style={{ color: '#8b6914' }}>{expectedFees.toLocaleString()}</p>
+              <p className="stat-detail" style={{ color: '#b8860b' }}>Total fees across students</p>
             </article>
-            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)', borderColor: '#a5d6a7' }}>
-              <h3 style={{ color: '#2e7d32' }}>Collected</h3>
-              <p className="stat-value" style={{ color: '#1b5e20' }}>₹{collectedFees.toLocaleString()}</p>
-              <p style={{ fontSize: '0.82rem', color: '#2e7d32' }}>{collectionRate}% collection rate</p>
+            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #edf8ef, #d4edda)', borderColor: '#a3d9b1' }}>
+              <h3 style={{ color: '#1a7a2e' }}>Collected</h3>
+              <p className="stat-value" style={{ color: '#145a22' }}>{collectedFees.toLocaleString()}</p>
+              <p className="stat-detail" style={{ color: '#1a7a2e' }}>{collectionRate}% collection rate</p>
+              <div className="progress-bar">
+                <div className="progress-bar-fill" style={{ width: `${collectionRate}%`, background: 'linear-gradient(90deg, #1a7a2e, #2d9e42)' }} />
+              </div>
             </article>
-            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #ffebee, #ffcdd2)', borderColor: '#ef9a9a' }}>
-              <h3 style={{ color: '#c62828' }}>Pending</h3>
-              <p className="stat-value" style={{ color: '#b71c1c' }}>₹{pendingFees.toLocaleString()}</p>
-              <p style={{ fontSize: '0.82rem', color: '#c62828' }}>Requires follow-up</p>
+            <article className="stat-card" style={{ background: 'linear-gradient(135deg, #fef0f0, #fddede)', borderColor: '#f5b3b3' }}>
+              <h3 style={{ color: '#c42020' }}>Pending</h3>
+              <p className="stat-value" style={{ color: '#991a1a' }}>{pendingFees.toLocaleString()}</p>
+              <p className="stat-detail" style={{ color: '#c42020' }}>Requires follow-up</p>
             </article>
           </div>
 
-          <div className="panel" style={{ marginTop: '1rem' }}>
+          <div className="panel" style={{ marginTop: '0.75rem' }}>
             <h3>Pending Fees Breakdown by Batch</h3>
-            <div className="table-wrap">
+            <div className="table-wrap" style={{ marginTop: '0.75rem' }}>
               <table className="table">
                 <thead>
                   <tr>
@@ -126,12 +130,12 @@ const AdminHomePage = () => {
                 <tbody>
                   {batchStats.sort((a,b) => b.pending - a.pending).map((row) => (
                     <tr key={row.batch}>
-                      <td style={{ fontWeight: 600 }}>{row.batch}</td>
+                      <td><span className="batch-badge">{row.batch}</span></td>
                       <td>{row.count}</td>
-                      <td>₹{row.total.toLocaleString()}</td>
-                      <td style={{ color: '#2e7d32', fontWeight: 600 }}>₹{row.collected.toLocaleString()}</td>
-                      <td style={{ fontWeight: 700, color: row.pending > 0 ? '#c62828' : '#2e7d32' }}>
-                        ₹{row.pending.toLocaleString()}
+                      <td>{row.total.toLocaleString()}</td>
+                      <td style={{ color: '#1a7a2e', fontWeight: 600 }}>{row.collected.toLocaleString()}</td>
+                      <td style={{ fontWeight: 700, color: row.pending > 0 ? '#c42020' : '#1a7a2e' }}>
+                        {row.pending.toLocaleString()}
                       </td>
                     </tr>
                   ))}

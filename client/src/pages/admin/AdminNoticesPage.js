@@ -53,7 +53,7 @@ const AdminNoticesPage = () => {
   const handleSendWhatsApp = async (noticeId) => {
     setError("");
     setSuccess("");
-    
+
     if (!window.confirm("Broadcast this notice via WhatsApp to the selected batch?")) return;
 
     try {
@@ -73,66 +73,79 @@ const AdminNoticesPage = () => {
       {error ? <p className="alert alert-error">{error}</p> : null}
       {success ? <p className="alert alert-success">{success}</p> : null}
 
-      <form className="form-stack" onSubmit={handleNotice}>
-        <div className="form-grid">
-          <input
-            className="input"
-            placeholder="Notice title"
-            value={noticeForm.title}
-            onChange={(event) =>
-              setNoticeForm((prev) => ({ ...prev, title: event.target.value }))
-            }
-            required
-          />
-          <select
-            className="input"
-            value={noticeForm.batch}
-            onChange={(event) =>
-              setNoticeForm((prev) => ({ ...prev, batch: event.target.value }))
-            }
-          >
-            {batchOptions.map(b => (
-              <option key={b} value={b}>{b === "All" ? "All Students" : b}</option>
-            ))}
-          </select>
-        </div>
-        <textarea
-          className="input textarea"
-          placeholder="Write notice details"
-          value={noticeForm.content}
-          onChange={(event) =>
-            setNoticeForm((prev) => ({ ...prev, content: event.target.value }))
-          }
-          required
-        />
-        <button className="button" type="submit">
-          Publish Notice
-        </button>
-      </form>
+      <div className="panel" style={{ marginTop: '0.5rem' }}>
+        <h3>Create New Notice</h3>
+        <form className="form-stack" onSubmit={handleNotice} style={{ marginTop: '0.75rem' }}>
+          <div className="form-grid">
+            <div>
+              <label>Title</label>
+              <input
+                className="input"
+                placeholder="Notice title"
+                value={noticeForm.title}
+                onChange={(event) =>
+                  setNoticeForm((prev) => ({ ...prev, title: event.target.value }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <label>Target Batch</label>
+              <select
+                className="input"
+                value={noticeForm.batch}
+                onChange={(event) =>
+                  setNoticeForm((prev) => ({ ...prev, batch: event.target.value }))
+                }
+              >
+                {batchOptions.map(b => (
+                  <option key={b} value={b}>{b === "All" ? "All Students" : b}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Content</label>
+            <textarea
+              className="input textarea"
+              placeholder="Write notice details..."
+              value={noticeForm.content}
+              onChange={(event) =>
+                setNoticeForm((prev) => ({ ...prev, content: event.target.value }))
+              }
+              required
+            />
+          </div>
+          <button className="button" type="submit">
+            Publish Notice
+          </button>
+        </form>
+      </div>
 
       {isLoading ? (
         <p className="loading-text">Loading notices...</p>
       ) : notices.length === 0 ? (
-        <p className="muted">No notices available.</p>
+        <div className="empty-state">
+          <p className="muted">No notices available.</p>
+        </div>
       ) : (
-        <div className="notice-list">
+        <div className="notice-list" style={{ marginTop: '0.5rem' }}>
           {notices.map((notice) => (
-            <article className="notice-item" key={notice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <article className="notice-item" key={notice.id}>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <h3 style={{ margin: 0 }}>{notice.title}</h3>
-                  <span style={{ fontSize: '0.8rem', background: '#e0e0e0', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
+                  <span className="batch-badge">
                     {notice.batch === "All" ? "All Classes" : notice.batch}
                   </span>
                 </div>
-                <p style={{ marginTop: '8px' }}>{notice.content}</p>
+                <p style={{ marginTop: '0.4rem' }}>{notice.content}</p>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', minWidth: '120px' }}>
-                <span className="muted">{notice.createdAt}</span>
-                <button 
-                  className="button button-secondary" 
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', minWidth: '110px' }}>
+                <span className="muted" style={{ fontSize: '0.78rem' }}>{notice.createdAt}</span>
+                <button
+                  className="button button-sm button-secondary"
                   onClick={() => handleSendWhatsApp(notice.id)}
-                  style={{ fontSize: '0.9rem', padding: '6px 12px' }}
                 >
                   Send WhatsApp
                 </button>

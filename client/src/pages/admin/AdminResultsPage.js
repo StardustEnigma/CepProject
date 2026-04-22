@@ -13,7 +13,7 @@ const AdminResultsPage = () => {
   const [students, setStudents] = useState([]);
   const [tests, setTests] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
-  
+
   const [form, setForm] = useState({
     batch: "8th class",
     subject: "Maths",
@@ -21,8 +21,8 @@ const AdminResultsPage = () => {
     maxMarks: 50
   });
 
-  const [marksData, setMarksData] = useState({}); // { studentId: { marks, isAbsent } }
-  
+  const [marksData, setMarksData] = useState({});
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -34,14 +34,13 @@ const AdminResultsPage = () => {
   useEffect(() => {
     const list = students.filter(s => s.batch === form.batch);
     setFilteredStudents(list);
-    
-    // reset marks data for missing students
+
     const newMarks = {};
     list.forEach(student => {
       newMarks[student.id] = { marks: "", isAbsent: false };
     });
     setMarksData(newMarks);
-    
+
     if (!batchSubjectsMap[form.batch].includes(form.subject)) {
       setForm(prev => ({ ...prev, subject: batchSubjectsMap[form.batch][0] || "" }));
     }
@@ -51,7 +50,7 @@ const AdminResultsPage = () => {
     try {
       const studs = await apiFetch("/students");
       setStudents(studs);
-      
+
       const t = await apiFetch("/tests");
       setTests(t);
     } catch (err) {
@@ -78,9 +77,8 @@ const AdminResultsPage = () => {
     e.preventDefault();
     clearFlash();
     setIsSaving(true);
-    
+
     try {
-      // Build results array
       const results = filteredStudents.map(student => {
         const md = marksData[student.id] || { marks: 0, isAbsent: false };
         return {
@@ -90,30 +88,26 @@ const AdminResultsPage = () => {
         };
       });
 
-      // validation
       for (const r of results) {
         if (!r.isAbsent && (r.marks < 0 || r.marks > form.maxMarks)) {
           throw new Error(`Invalid marks. Must be between 0 and ${form.maxMarks}.`);
         }
       }
 
-      // Save Test
       const testRes = await apiFetch("/tests", {
         method: "POST",
         body: JSON.stringify({ ...form, results, maxMarks: Number(form.maxMarks) })
       });
-      
+
       const testId = testRes.test.id;
 
-      // Broadcast WhatsApp
       await apiFetch(`/tests/${testId}/whatsapp`, {
         method: "POST"
       });
 
       setSuccess("Test results saved and WhatsApp broadcast queued!");
       loadData();
-      
-      // Reset form marks
+
       const newMarks = {};
       filteredStudents.forEach(student => {
         newMarks[student.id] = { marks: "", isAbsent: false };
@@ -154,12 +148,12 @@ const AdminResultsPage = () => {
       {error && <p className="alert alert-error">{error}</p>}
       {success && <p className="alert alert-success">{success}</p>}
 
-      <section className="panel" style={{ marginBottom: "2rem" }}>
+      <section className="panel" style={{ marginBottom: "1.25rem" }}>
         <h3>Add New Test Result</h3>
         <p className="muted" style={{ marginTop: 0 }}>Create a test for a batch and broadcast results on WhatsApp.</p>
-        
+
         <form onSubmit={handleSubmit}>
-          <div className="form-grid" style={{ marginBottom: "1rem" }}>
+          <div className="form-grid" style={{ marginTop: '0.75rem', marginBottom: "1rem" }}>
             <div>
               <label>Batch</label>
               <select className="input" value={form.batch} onChange={(e) => setForm({ ...form, batch: e.target.value })}>
@@ -168,7 +162,7 @@ const AdminResultsPage = () => {
                 ))}
               </select>
             </div>
-            
+
             <div>
               <label>Subject</label>
               <select className="input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })}>
@@ -190,7 +184,9 @@ const AdminResultsPage = () => {
           </div>
 
           {filteredStudents.length === 0 ? (
-            <p className="muted">No students in this batch.</p>
+            <div className="empty-state">
+              <p className="muted">No students in this batch.</p>
+            </div>
           ) : (
             <div className="table-wrap">
               <table className="table">
@@ -204,19 +200,18 @@ const AdminResultsPage = () => {
                 <tbody>
                   {filteredStudents.map(student => (
                     <tr key={student.id}>
-                      <td>{student.name}</td>
+                      <td style={{ fontWeight: 600 }}>{student.name}</td>
                       <td>
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={marksData[student.id]?.isAbsent || false}
                           onChange={(e) => handleMarkChange(student.id, "isAbsent", e.target.checked)}
-                          style={{ transform: "scale(1.2)" }}
                         />
                       </td>
                       <td>
-                        <input 
-                          type="number" 
-                          className="input" 
+                        <input
+                          type="number"
+                          className="input"
                           placeholder="Marks"
                           value={marksData[student.id]?.marks}
                           onChange={(e) => handleMarkChange(student.id, "marks", e.target.value)}
@@ -235,7 +230,7 @@ const AdminResultsPage = () => {
 
           <div style={{ marginTop: "1rem" }}>
             <button type="submit" className="button button-primary" disabled={isSaving || filteredStudents.length === 0}>
-              {isSaving ? "Saving..." : "Save Test & Send WhatsApp to Batch"}
+              {isSaving ? "Saving..." : "Save Test & Send WhatsApp"}
             </button>
           </div>
         </form>
@@ -244,9 +239,11 @@ const AdminResultsPage = () => {
       <section>
         <h3>Past Tests</h3>
         {tests.length === 0 ? (
-          <p className="muted">No tests added yet.</p>
+          <div className="empty-state">
+            <p className="muted">No tests added yet.</p>
+          </div>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ marginTop: '0.5rem' }}>
             <table className="table">
               <thead>
                 <tr>
@@ -261,18 +258,20 @@ const AdminResultsPage = () => {
               <tbody>
                 {tests.map(test => (
                   <tr key={test.id}>
-                    <td>{test.batch}</td>
-                    <td>{test.subject}</td>
+                    <td><span className="batch-badge">{test.batch}</span></td>
+                    <td style={{ fontWeight: 600 }}>{test.subject}</td>
                     <td>{test.date}</td>
                     <td>{test.maxMarks}</td>
                     <td>{test.results.length}</td>
                     <td>
-                      <button className="button button-secondary" type="button" onClick={() => handleResendWhatsApp(test.id)} style={{ marginRight: '8px' }}>
-                        Resend WA
-                      </button>
-                      <button className="button button-danger" type="button" onClick={() => handleDeleteTest(test.id)}>
-                        Delete
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <button className="button button-sm button-secondary" type="button" onClick={() => handleResendWhatsApp(test.id)}>
+                          Resend WA
+                        </button>
+                        <button className="button button-sm button-danger" type="button" onClick={() => handleDeleteTest(test.id)}>
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

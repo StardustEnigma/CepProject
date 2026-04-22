@@ -13,18 +13,12 @@ const StudentNoticesPage = () => {
       try {
         const studentId = localStorage.getItem("studentId");
         if (!studentId) throw new Error("Student session not found");
-
         const student = await apiFetch(`/students/${studentId}`);
         const data = await apiFetch(`/notices?batch=${encodeURIComponent(student.batch)}`);
-        
         setNotices(data);
-      } catch (requestError) {
-        setError(requestError.message || "Unable to load notices.");
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (e) { setError(e.message || "Unable to load notices."); }
+      finally { setIsLoading(false); }
     };
-
     loadNotices();
   }, []);
 
@@ -36,7 +30,9 @@ const StudentNoticesPage = () => {
       {isLoading ? (
         <p className="loading-text">Loading notices...</p>
       ) : notices.length === 0 ? (
-        <p className="muted">No notices available right now.</p>
+        <div className="empty-state">
+          <p className="muted">No notices available right now.</p>
+        </div>
       ) : (
         <div className="notice-list">
           {notices.map((notice) => (

@@ -4,6 +4,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const bcrypt = require("bcryptjs");
+const connectDB = require("./db");
 const {
   initializeWhatsAppClient,
   sendWhatsAppText,
@@ -12,6 +13,14 @@ const {
   getWhatsAppStatus,
   resetWhatsAppClient
 } = require("./whatsappClient");
+
+// Mongoose Models
+const Student = require("./models/Student");
+const Notice = require("./models/Notice");
+const Timetable = require("./models/Timetable");
+const Test = require("./models/Test");
+const Admin = require("./models/Admin");
+const Counter = require("./models/Counter");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_jwt_key";
 
@@ -49,12 +58,6 @@ app.use(cors({
 app.use(express.json());
 initializeWhatsAppClient();
 
-const ADMIN_CREDENTIALS = {
-  username: "admin",
-  passwordHash: bcrypt.hashSync("admin123", 10)
-};
-
-const batchesList = ["8th class", "9th class", "10th class", "11th class", "12th class"];
 const batchSubjects = {
   "8th class": ["Maths", "Science", "English", "SST"],
   "9th class": ["Physics", "Chemistry", "Biology", "Maths"],
@@ -62,9 +65,7 @@ const batchSubjects = {
   "11th class": ["Physics", "Chemistry", "Biology", "Maths"],
   "12th class": ["Physics", "Chemistry", "Biology", "Maths"]
 };
-const firstNames = ["Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Krishna", "Ishaan", "Shaurya", "Priya", "Rohan", "Ananya", "Sneha", "Kavya", "Diya", "Isha", "Neha", "Pooja", "Rahul", "Aman", "Ravi", "Vikram", "Sunil", "Ankit", "Rohit", "Sachin", "Sushant", "Kiran", "Nisha"];
-const lastNames = ["Sharma", "Gupta", "Verma", "Singh", "Kumar", "Krishna", "Joshi", "Yadav", "Patel", "Desai", "Deshmukh", "Patil", "Iyer", "Rao", "Nair", "Pillai", "Chauhan", "Rajput", "Malhotra", "Kapoor"];
-const getSeedPhoneNumber = (seedId) => `91${(7000000000 + seedId).toString()}`;
+
 const defaultWhatsAppTemplates = {
   welcome: "Welcome to Gurukul Academy, {{name}}! We are happy to have you with us.",
   feeReminder: "Dear {{name}}, this is a gentle reminder that Rs. {{feesPending}} in tuition fees are currently pending at Gurukul Academy. Kindly complete your payment soon.",
@@ -76,54 +77,6 @@ let whatsappTemplates = {
   ...defaultWhatsAppTemplates
 };
 
-let students = [];
-let studentIdCounter = 1;
-
-let tests = [];
-
-for (const batch of batchesList) {
-  for (let i = 1; i <= 10; i++) {
-    const feesTotal = batch === "8th class" ? 10000 : batch === "9th class" ? 12000 : batch === "10th class" ? 15000 : batch === "11th class" ? 20000 : 25000;
-    const feesPaid = i % 2 === 0 ? feesTotal : (i % 3 === 0 ? feesTotal / 2 : 0); // some paid full, some half, some none
-    const payments = [];
-    if (feesPaid > 0) {
-      payments.push({ id: Date.now() + i, amount: feesPaid, mode: "Cash", date: "2026-04-01" });
-    }
-    
-    // Pick realistic names
-    const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-
-    students.push({
-      id: studentIdCounter,
-      name: `${randomFirstName} ${randomLastName}`,
-      password: bcrypt.hashSync("password123", 10),
-      phoneNumber: getSeedPhoneNumber(studentIdCounter),
-      batch: batch,
-      subjects: batchSubjects[batch] || [],
-      feesTotal: feesTotal,
-      feesPaid: feesPaid,
-      payments: payments,
-      attendance: [
-        { date: "2026-04-01", present: i % 4 !== 0 },
-        { date: "2026-04-02", present: true }
-      ]
-    });
-    studentIdCounter++;
-  }
-}
-
-
-let notices = [
-  {
-    id: 1,
-    title: "Welcome",
-    content: "New batch starts from 10 April. Bring notebooks and ID card.",
-    batch: "All",
-    createdAt: "2026-04-03"
-  }
-];
-
 const dayOrder = {
   Monday: 1,
   Tuesday: 2,
@@ -134,48 +87,8 @@ const dayOrder = {
   Sunday: 7
 };
 
-let timetable = [];
-let ttIdCounter = 1;
-const classDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const times11_12 = [
-  { start: "15:00", end: "16:00" },
-  { start: "16:00", end: "17:00" }
-];
-const times8_10 = [
-  { start: "17:00", end: "18:00" },
-  { start: "18:00", end: "19:00" }
-];
-
-// 8th class teachers
-const t8 = { Maths: "Bhaki maam", Science: "Shubham sir", SST: "Mowade sir", English: "Mowade sir" };
-// 9-12 teachers
-const tHigh = { Maths: "Akash sir", Physics: "Akash sir", Chemistry: "Shubham sir", Biology: "Shubham sir" };
-
-for (const day of classDays) {
-  // --- 11th and 12th class (15:00 to 17:00) ---
-  // Slot 1: 15:00 - 16:00
-  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[0].start, endTime: times11_12[0].end, subject: "Maths", teacher: tHigh.Maths, batch: "11th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[0].start, endTime: times11_12[0].end, subject: "Biology", teacher: tHigh.Biology, batch: "12th class", isExtraClass: false });
-  
-  // Slot 2: 16:00 - 17:00
-  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[1].start, endTime: times11_12[1].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "11th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times11_12[1].start, endTime: times11_12[1].end, subject: "Physics", teacher: tHigh.Physics, batch: "12th class", isExtraClass: false });
-
-  // --- 8th, 9th, and 10th class (17:00 to 19:00) ---
-  // Slot 1: 17:00 - 18:00
-  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[0].start, endTime: times8_10[0].end, subject: "Maths", teacher: t8.Maths, batch: "8th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[0].start, endTime: times8_10[0].end, subject: "Physics", teacher: tHigh.Physics, batch: "9th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[0].start, endTime: times8_10[0].end, subject: "Chemistry", teacher: tHigh.Chemistry, batch: "10th class", isExtraClass: false });
-
-  // Slot 2: 18:00 - 19:00
-  // Note: SST (Mowade sir) is chosen to prevent overlap with Shubham sir teaching Biology for 9th.
-  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[1].start, endTime: times8_10[1].end, subject: "SST", teacher: t8.SST, batch: "8th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[1].start, endTime: times8_10[1].end, subject: "Biology", teacher: tHigh.Biology, batch: "9th class", isExtraClass: false });
-  timetable.push({ id: ttIdCounter++, day, startTime: times8_10[1].start, endTime: times8_10[1].end, subject: "Maths", teacher: tHigh.Maths, batch: "10th class", isExtraClass: false });
-}
-
-const sanitizeStudent = (student) => {
-  const studentTests = tests.filter(t => t.batch === student.batch).map(t => {
+const sanitizeStudent = (student, studentTests) => {
+  const testResults = (studentTests || []).map(t => {
     const res = t.results.find(r => r.studentId === student.id) || null;
     return {
       id: t.id,
@@ -196,37 +109,21 @@ const sanitizeStudent = (student) => {
     subjects: student.subjects || [],
     feesTotal: student.feesTotal || 0,
     feesPaid: student.feesPaid || 0,
-    payments: student.payments || [],
+    payments: (student.payments || []).map(p => ({
+      id: p.paymentId,
+      amount: p.amount,
+      mode: p.mode,
+      date: p.date
+    })),
     attendance: student.attendance,
     feesPending: (student.feesTotal || 0) - (student.feesPaid || 0),
     lastWhatsAppStatus: student.lastWhatsAppStatus || null,
     lastWhatsAppType: student.lastWhatsAppType || null,
     lastWhatsAppAt: student.lastWhatsAppAt || null,
     lastWhatsAppInfo: student.lastWhatsAppInfo || null,
-    testResults: studentTests
+    testResults
   };
 };
-
-const getNextId = (items) => {
-  if (items.length === 0) {
-    return 1;
-  }
-
-  return Math.max(...items.map((item) => item.id)) + 1;
-};
-
-const parseId = (value) => Number.parseInt(value, 10);
-
-const sortTimetable = (entries) =>
-  [...entries].sort((a, b) => {
-    const dayDifference = (dayOrder[a.day] || 99) - (dayOrder[b.day] || 99);
-
-    if (dayDifference !== 0) {
-      return dayDifference;
-    }
-
-    return a.startTime.localeCompare(b.startTime);
-  });
 
 const getStudentFeesPending = (student) =>
   Math.max(0, Number(student.feesTotal || 0) - Number(student.feesPaid || 0));
@@ -236,7 +133,6 @@ const renderTemplate = (template, context) =>
     if (context[key] == null) {
       return "";
     }
-
     return String(context[key]);
   });
 
@@ -266,9 +162,9 @@ const getNoticeTemplateContext = (student, notice) => ({
   content: notice.content
 });
 
-const updateWhatsAppDeliveryOnStudent = (student, type, delivery, text) => {
+const updateWhatsAppDeliveryOnStudent = async (student, type, delivery, text) => {
   const event = {
-    id: Date.now(),
+    eventId: Date.now(),
     type,
     sent: Boolean(delivery.sent),
     info: delivery.message,
@@ -276,23 +172,26 @@ const updateWhatsAppDeliveryOnStudent = (student, type, delivery, text) => {
     text
   };
 
-  student.whatsappEvents = student.whatsappEvents || [];
-  student.whatsappEvents.unshift(event);
-  if (student.whatsappEvents.length > 20) {
-    student.whatsappEvents = student.whatsappEvents.slice(0, 20);
-  }
-
-  student.lastWhatsAppStatus = event.sent ? "sent" : "failed";
-  student.lastWhatsAppType = type;
-  student.lastWhatsAppAt = event.at;
-  student.lastWhatsAppInfo = event.info;
+  // Push event and trim to 20
+  await Student.updateOne(
+    { id: student.id },
+    {
+      $push: { whatsappEvents: { $each: [event], $position: 0, $slice: 20 } },
+      $set: {
+        lastWhatsAppStatus: event.sent ? "sent" : "failed",
+        lastWhatsAppType: type,
+        lastWhatsAppAt: event.at,
+        lastWhatsAppInfo: event.info
+      }
+    }
+  );
 };
 
 const sendTemplatedStudentWhatsApp = async (student, type, template) => {
   const context = getStudentTemplateContext(student);
   const messageText = renderTemplate(template, context);
   const delivery = await sendWhatsAppText(student.phoneNumber, messageText);
-  updateWhatsAppDeliveryOnStudent(student, type, delivery, messageText);
+  await updateWhatsAppDeliveryOnStudent(student, type, delivery, messageText);
 
   return {
     delivery,
@@ -300,20 +199,20 @@ const sendTemplatedStudentWhatsApp = async (student, type, template) => {
   };
 };
 
+// ===================== ROUTES =====================
+
 app.get("/", (req, res) => {
   res.json({
     message: "Gurukul Academy API is running."
   });
 });
 
-app.post("/login/admin", (req, res) => {
+app.post("/login/admin", async (req, res) => {
   const { username, password } = req.body;
 
-  if (
-    username === ADMIN_CREDENTIALS.username &&
-    bcrypt.compareSync(password, ADMIN_CREDENTIALS.passwordHash)
-  ) {
-    const token = jwt.sign({ username: ADMIN_CREDENTIALS.username, role: 'admin' }, JWT_SECRET, { expiresIn: '1d' });
+  const admin = await Admin.findOne({ username });
+  if (admin && bcrypt.compareSync(password, admin.passwordHash)) {
+    const token = jwt.sign({ username: admin.username, role: 'admin' }, JWT_SECRET, { expiresIn: '1d' });
     return res.json({
       role: "admin",
       message: "Admin login successful",
@@ -326,7 +225,7 @@ app.post("/login/admin", (req, res) => {
   });
 });
 
-app.post("/login/student", (req, res) => {
+app.post("/login/student", async (req, res) => {
   const { name, password } = req.body;
 
   if (!name || !password) {
@@ -335,9 +234,9 @@ app.post("/login/student", (req, res) => {
     });
   }
 
-  const student = students.find(
-    (item) => item.name.toLowerCase() === String(name).trim().toLowerCase()
-  );
+  const student = await Student.findOne({
+    name: { $regex: new RegExp(`^${String(name).trim()}$`, 'i') }
+  });
 
   if (!student || !bcrypt.compareSync(password, student.password)) {
     return res.status(401).json({
@@ -345,12 +244,13 @@ app.post("/login/student", (req, res) => {
     });
   }
 
+  const tests = await Test.find({ batch: student.batch }).lean();
   const token = jwt.sign({ id: student.id, name: student.name, role: 'student' }, JWT_SECRET, { expiresIn: '1d' });
 
   return res.json({
     role: "student",
     message: "Student login successful",
-    student: sanitizeStudent(student),
+    student: sanitizeStudent(student, tests),
     token
   });
 });
@@ -417,14 +317,20 @@ app.put("/whatsapp/templates", (req, res) => {
   });
 });
 
-app.get("/students", (req, res) => {
-  const response = students.map(sanitizeStudent);
+app.get("/students", async (req, res) => {
+  const students = await Student.find({}).lean();
+  const tests = await Test.find({}).lean();
+
+  const response = students.map(s => {
+    const batchTests = tests.filter(t => t.batch === s.batch);
+    return sanitizeStudent(s, batchTests);
+  });
   res.json(response);
 });
 
-app.get("/students/:id", (req, res) => {
-  const studentId = parseId(req.params.id);
-  const student = students.find((item) => item.id === studentId);
+app.get("/students/:id", async (req, res) => {
+  const studentId = Number.parseInt(req.params.id, 10);
+  const student = await Student.findOne({ id: studentId }).lean();
 
   if (!student) {
     return res.status(404).json({
@@ -432,7 +338,8 @@ app.get("/students/:id", (req, res) => {
     });
   }
 
-  return res.json(sanitizeStudent(student));
+  const tests = await Test.find({ batch: student.batch }).lean();
+  return res.json(sanitizeStudent(student, tests));
 });
 
 app.post("/students", async (req, res) => {
@@ -451,14 +358,9 @@ app.post("/students", async (req, res) => {
     });
   }
 
-  const alreadyExists = students.some(
-    (student) =>
-      student.name.toLowerCase() === String(name).trim().toLowerCase()
-  );
-
-  const phoneAlreadyExists = students.some(
-    (student) => student.phoneNumber === normalizedPhoneNumber
-  );
+  const alreadyExists = await Student.findOne({
+    name: { $regex: new RegExp(`^${String(name).trim()}$`, 'i') }
+  });
 
   if (alreadyExists) {
     return res.status(409).json({
@@ -466,14 +368,17 @@ app.post("/students", async (req, res) => {
     });
   }
 
+  const phoneAlreadyExists = await Student.findOne({ phoneNumber: normalizedPhoneNumber });
   if (phoneAlreadyExists) {
     return res.status(409).json({
       message: "Student with this phone number already exists"
     });
   }
 
-  const newStudent = {
-    id: getNextId(students),
+  const nextId = await Counter.getNextId("students");
+
+  const newStudent = await Student.create({
+    id: nextId,
     name: String(name).trim(),
     password: bcrypt.hashSync(String(password).trim(), 10),
     phoneNumber: normalizedPhoneNumber,
@@ -488,9 +393,7 @@ app.post("/students", async (req, res) => {
     lastWhatsAppType: null,
     lastWhatsAppAt: null,
     lastWhatsAppInfo: null
-  };
-
-  students.push(newStudent);
+  });
 
   const { delivery } = await sendTemplatedStudentWhatsApp(
     newStudent,
@@ -501,16 +404,20 @@ app.post("/students", async (req, res) => {
     ? "Student added successfully and welcome WhatsApp message sent."
     : "Student added successfully, but welcome WhatsApp message is pending.";
 
+  // Re-fetch to get updated WhatsApp fields
+  const updatedStudent = await Student.findOne({ id: nextId }).lean();
+  const tests = await Test.find({ batch: updatedStudent.batch }).lean();
+
   return res.status(201).json({
     message,
-    student: sanitizeStudent(newStudent),
+    student: sanitizeStudent(updatedStudent, tests),
     whatsapp: delivery
   });
 });
 
 app.post("/students/:id/whatsapp/fee-reminder", async (req, res) => {
-  const studentId = parseId(req.params.id);
-  const student = students.find((item) => item.id === studentId);
+  const studentId = Number.parseInt(req.params.id, 10);
+  const student = await Student.findOne({ id: studentId });
 
   if (!student) {
     return res.status(404).json({
@@ -531,36 +438,37 @@ app.post("/students/:id/whatsapp/fee-reminder", async (req, res) => {
     whatsappTemplates.feeReminder
   );
 
+  const updatedStudent = await Student.findOne({ id: studentId }).lean();
+  const tests = await Test.find({ batch: updatedStudent.batch }).lean();
+
   return res.json({
     message: delivery.sent
       ? "Fee reminder WhatsApp message sent successfully"
       : "Fee reminder could not be delivered right now",
     whatsapp: delivery,
     preview: messageText,
-    student: sanitizeStudent(student)
+    student: sanitizeStudent(updatedStudent, tests)
   });
 });
 
-app.delete("/students/:id", (req, res) => {
-  const studentId = parseId(req.params.id);
-  const studentIndex = students.findIndex((item) => item.id === studentId);
+app.delete("/students/:id", async (req, res) => {
+  const studentId = Number.parseInt(req.params.id, 10);
+  const student = await Student.findOneAndDelete({ id: studentId }).lean();
 
-  if (studentIndex < 0) {
+  if (!student) {
     return res.status(404).json({
       message: "Student not found"
     });
   }
 
-  const [deletedStudent] = students.splice(studentIndex, 1);
-
   return res.json({
     message: "Student deleted successfully",
-    student: sanitizeStudent(deletedStudent)
+    student: sanitizeStudent(student, [])
   });
 });
 
-app.post("/students/:id/pay", (req, res) => {
-  const studentId = parseId(req.params.id);
+app.post("/students/:id/pay", async (req, res) => {
+  const studentId = Number.parseInt(req.params.id, 10);
   const { amount, mode } = req.body;
 
   if (!amount || amount <= 0 || !mode) {
@@ -569,7 +477,7 @@ app.post("/students/:id/pay", (req, res) => {
     });
   }
 
-  const student = students.find((item) => item.id === studentId);
+  const student = await Student.findOne({ id: studentId });
   if (!student) {
     return res.status(404).json({
       message: "Student not found"
@@ -577,24 +485,26 @@ app.post("/students/:id/pay", (req, res) => {
   }
 
   const payment = {
-    id: Date.now(),
+    paymentId: Date.now(),
     amount: Number(amount),
     mode: String(mode).trim(),
     date: new Date().toISOString().slice(0, 10)
   };
 
-  student.payments = student.payments || [];
   student.payments.push(payment);
   student.feesPaid = (student.feesPaid || 0) + Number(amount);
+  await student.save();
+
+  const tests = await Test.find({ batch: student.batch }).lean();
 
   return res.json({
     message: "Payment processed successfully",
-    student: sanitizeStudent(student),
-    payment
+    student: sanitizeStudent(student.toObject(), tests),
+    payment: { id: payment.paymentId, amount: payment.amount, mode: payment.mode, date: payment.date }
   });
 });
 
-app.post("/attendance", (req, res) => {
+app.post("/attendance", async (req, res) => {
   const { studentId, date, present, timetableId } = req.body;
 
   if (!studentId || !date || typeof present !== "boolean") {
@@ -603,8 +513,8 @@ app.post("/attendance", (req, res) => {
     });
   }
 
-  const parsedStudentId = parseId(studentId);
-  const student = students.find((item) => item.id === parsedStudentId);
+  const parsedStudentId = Number.parseInt(studentId, 10);
+  const student = await Student.findOne({ id: parsedStudentId });
 
   if (!student) {
     return res.status(404).json({
@@ -612,35 +522,45 @@ app.post("/attendance", (req, res) => {
     });
   }
 
-  // Find slot to know the subject context, or save the timetableId
-  const slot = timetable.find((t) => t.id === Number(timetableId));
-  const subjectName = slot ? slot.subject : "General";
+  // Find slot to know the subject context
+  let subjectName = "General";
+  if (timetableId) {
+    const slot = await Timetable.findOne({ id: Number(timetableId) }).lean();
+    if (slot) subjectName = slot.subject;
+  }
 
-  const existingEntry = student.attendance.find((entry) => entry.date === date && entry.subject === subjectName);
-  if (existingEntry) {
-    existingEntry.present = present;
+  const existingIndex = student.attendance.findIndex(
+    (entry) => entry.date === date && entry.subject === subjectName
+  );
+
+  if (existingIndex >= 0) {
+    student.attendance[existingIndex].present = present;
   } else {
-    student.attendance.push({ date, present, subject: subjectName, timetableId });
+    student.attendance.push({ date, present, subject: subjectName, timetableId: timetableId || null });
   }
 
   student.attendance.sort((a, b) => a.date.localeCompare(b.date));
+  await student.save();
+
+  const tests = await Test.find({ batch: student.batch }).lean();
 
   return res.json({
     message: "Attendance updated successfully",
-    student: sanitizeStudent(student)
+    student: sanitizeStudent(student.toObject(), tests)
   });
 });
 
-app.get("/notices", (req, res) => {
+app.get("/notices", async (req, res) => {
   const { batch } = req.query;
+  let filter = {};
   if (batch && batch !== "All" && typeof batch === "string") {
-    const filtered = notices.filter(n => n.batch === "All" || n.batch === batch);
-    return res.json(filtered);
+    filter = { $or: [{ batch: "All" }, { batch }] };
   }
-  res.json(notices);
+  const noticesList = await Notice.find(filter).sort({ id: -1 }).lean();
+  res.json(noticesList);
 });
 
-app.post("/notices", (req, res) => {
+app.post("/notices", async (req, res) => {
   const { title, content, batch } = req.body;
 
   if (!title || !String(title).trim() || !content || !String(content).trim()) {
@@ -649,15 +569,15 @@ app.post("/notices", (req, res) => {
     });
   }
 
-  const notice = {
-    id: getNextId(notices),
+  const nextId = await Counter.getNextId("notices");
+
+  const notice = await Notice.create({
+    id: nextId,
     title: String(title).trim(),
     content: String(content).trim(),
     batch: batch ? String(batch).trim() : "All",
     createdAt: new Date().toISOString().slice(0, 10)
-  };
-
-  notices = [notice, ...notices];
+  });
 
   return res.status(201).json({
     message: "Notice posted successfully",
@@ -666,16 +586,18 @@ app.post("/notices", (req, res) => {
 });
 
 app.post("/notices/:id/whatsapp", async (req, res) => {
-  const noticeId = parseId(req.params.id);
-  const notice = notices.find(n => n.id === noticeId);
+  const noticeId = Number.parseInt(req.params.id, 10);
+  const notice = await Notice.findOne({ id: noticeId }).lean();
 
   if (!notice) {
     return res.status(404).json({ message: "Notice not found" });
   }
 
-  const targetStudents = notice.batch === "All" 
-    ? students 
-    : students.filter(s => s.batch === notice.batch);
+  let filter = {};
+  if (notice.batch !== "All") {
+    filter = { batch: notice.batch };
+  }
+  const targetStudents = await Student.find(filter).lean();
 
   const deliveries = [];
 
@@ -686,7 +608,7 @@ app.post("/notices/:id/whatsapp", async (req, res) => {
     const messageText = renderTemplate(whatsappTemplates.notice, context);
     const delivery = await sendWhatsAppText(student.phoneNumber, messageText);
 
-    updateWhatsAppDeliveryOnStudent(student, "notice", delivery, messageText);
+    await updateWhatsAppDeliveryOnStudent(student, "notice", delivery, messageText);
     deliveries.push({ studentId: student.id, name: student.name, delivery });
   }
 
@@ -696,11 +618,17 @@ app.post("/notices/:id/whatsapp", async (req, res) => {
   });
 });
 
-app.get("/timetable", (req, res) => {
-  res.json(sortTimetable(timetable));
+app.get("/timetable", async (req, res) => {
+  const entries = await Timetable.find({}).lean();
+  const sorted = [...entries].sort((a, b) => {
+    const dayDifference = (dayOrder[a.day] || 99) - (dayOrder[b.day] || 99);
+    if (dayDifference !== 0) return dayDifference;
+    return a.startTime.localeCompare(b.startTime);
+  });
+  res.json(sorted);
 });
 
-app.post("/timetable", (req, res) => {
+app.post("/timetable", async (req, res) => {
   const { day, startTime, endTime, subject, teacher, batch, isExtraClass } = req.body;
 
   if (
@@ -744,13 +672,12 @@ app.post("/timetable", (req, res) => {
   }
 
   const normalizedBatch = String(batch).trim();
-  const duplicateSlot = timetable.find(
-    (item) =>
-      item.day === String(day).trim() &&
-      item.batch === normalizedBatch &&
-      item.startTime === normalizedStartTime &&
-      item.endTime === normalizedEndTime
-  );
+  const duplicateSlot = await Timetable.findOne({
+    day: String(day).trim(),
+    batch: normalizedBatch,
+    startTime: normalizedStartTime,
+    endTime: normalizedEndTime
+  });
 
   if (duplicateSlot) {
     return res.status(409).json({
@@ -758,8 +685,10 @@ app.post("/timetable", (req, res) => {
     });
   }
 
-  const entry = {
-    id: getNextId(timetable),
+  const nextId = await Counter.getNextId("timetable");
+
+  const entry = await Timetable.create({
+    id: nextId,
     day: String(day).trim(),
     startTime: normalizedStartTime,
     endTime: normalizedEndTime,
@@ -767,10 +696,7 @@ app.post("/timetable", (req, res) => {
     teacher: String(teacher).trim(),
     batch: normalizedBatch,
     isExtraClass: Boolean(isExtraClass)
-  };
-
-  timetable.push(entry);
-  timetable = sortTimetable(timetable);
+  });
 
   return res.status(201).json({
     message: "Timetable entry added successfully",
@@ -778,17 +704,15 @@ app.post("/timetable", (req, res) => {
   });
 });
 
-app.delete("/timetable/:id", (req, res) => {
-  const timetableId = parseId(req.params.id);
-  const timetableIndex = timetable.findIndex((item) => item.id === timetableId);
+app.delete("/timetable/:id", async (req, res) => {
+  const timetableId = Number.parseInt(req.params.id, 10);
+  const deletedEntry = await Timetable.findOneAndDelete({ id: timetableId }).lean();
 
-  if (timetableIndex < 0) {
+  if (!deletedEntry) {
     return res.status(404).json({
       message: "Timetable entry not found"
     });
   }
-
-  const [deletedEntry] = timetable.splice(timetableIndex, 1);
 
   return res.json({
     message: "Timetable entry deleted successfully",
@@ -796,31 +720,32 @@ app.delete("/timetable/:id", (req, res) => {
   });
 });
 
-app.get("/tests", (req, res) => {
-  res.json(tests);
+app.get("/tests", async (req, res) => {
+  const allTests = await Test.find({}).sort({ id: -1 }).lean();
+  res.json(allTests);
 });
 
-app.post("/tests", (req, res) => {
+app.post("/tests", async (req, res) => {
   const { batch, subject, date, maxMarks, results } = req.body;
 
   if (!batch || !subject || !date || typeof maxMarks !== 'number' || !Array.isArray(results)) {
     return res.status(400).json({ message: "Invalid test data. Required: batch, subject, date, maxMarks, results array." });
   }
 
-  const test = {
-    id: getNextId(tests),
+  const nextId = await Counter.getNextId("tests");
+
+  const test = await Test.create({
+    id: nextId,
     batch: String(batch).trim(),
     subject: String(subject).trim(),
     date: String(date).trim(),
     maxMarks: maxMarks,
     results: results.map(r => ({
-      studentId: parseId(r.studentId),
+      studentId: Number.parseInt(r.studentId, 10),
       marks: Number(r.marks || 0),
       isAbsent: Boolean(r.isAbsent)
     }))
-  };
-
-  tests.unshift(test);
+  });
 
   return res.status(201).json({
     message: "Test created successfully",
@@ -829,24 +754,24 @@ app.post("/tests", (req, res) => {
 });
 
 app.post("/tests/:id/whatsapp", async (req, res) => {
-  const testId = parseId(req.params.id);
-  const test = tests.find(t => t.id === testId);
+  const testId = Number.parseInt(req.params.id, 10);
+  const test = await Test.findOne({ id: testId }).lean();
 
   if (!test) {
     return res.status(404).json({ message: "Test not found" });
   }
 
   const deliveries = [];
-  
+
   for (const result of test.results) {
-    const student = students.find(s => s.id === result.studentId);
+    const student = await Student.findOne({ id: result.studentId }).lean();
     if (!student || !student.phoneNumber) continue;
 
     const context = getTestTemplateContext(student, test, result);
     const messageText = renderTemplate(whatsappTemplates.testResult, context);
     const delivery = await sendWhatsAppText(student.phoneNumber, messageText);
-    
-    updateWhatsAppDeliveryOnStudent(student, "test-result", delivery, messageText);
+
+    await updateWhatsAppDeliveryOnStudent(student, "test-result", delivery, messageText);
     deliveries.push({ studentId: student.id, name: student.name, delivery });
   }
 
@@ -856,15 +781,14 @@ app.post("/tests/:id/whatsapp", async (req, res) => {
   });
 });
 
-app.delete("/tests/:id", (req, res) => {
-  const testId = parseId(req.params.id);
-  const testIndex = tests.findIndex(t => t.id === testId);
+app.delete("/tests/:id", async (req, res) => {
+  const testId = Number.parseInt(req.params.id, 10);
+  const deletedTest = await Test.findOneAndDelete({ id: testId }).lean();
 
-  if (testIndex < 0) {
+  if (!deletedTest) {
     return res.status(404).json({ message: "Test not found" });
   }
 
-  const [deletedTest] = tests.splice(testIndex, 1);
   return res.json({ message: "Test deleted successfully", test: deletedTest });
 });
 
@@ -875,7 +799,15 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Server is running on http://localhost:${PORT}`);
+// --- Start Server with DB Connection ---
+const startServer = async () => {
+  await connectDB();
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+};
+
+startServer().catch((err) => {
+  console.error("Failed to start server:", err.message);
+  process.exit(1);
 });

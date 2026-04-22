@@ -13,16 +13,18 @@ Gurukul Academy is a role-based coaching center management application with two 
 
 The project currently runs as a monorepo with a React frontend and an Express backend, and it integrates heavily with WhatsApp for automated communication.
 
-## 2. Problem Statement
+## 2. Motivation & Problem Statement
 
-Traditional coaching center operations are often managed manually using notebooks, WhatsApp chats, and spreadsheets. This causes:
+**Why we built this:** This project was specifically designed for **rural coaching centers** to help them manage their daily operations efficiently. Administrative overhead and resource constraints often limit a center's ability to focus on teaching. By providing a low-cost, automated management platform, we empower these centers to drastically reduce their operational overhead. The time and money saved can be redirected toward the core social mission: **making education accessible for everyone, offering high-quality education at a lower cost, and providing more scholarships to underprivileged students.**
+
+**The Operational Problem:** Traditional coaching operations are often managed manually using physical notebooks, disconnected WhatsApp chats, and spreadsheets. This causes:
 
 - Fragmented records for attendance, fees, and test results.
 - Delay in communicating notices and results to parents.
 - Difficult financial tracking across batches.
 - No unified student-facing view of performance and dues.
 
-This system centralizes those workflows into a single web application while maintaining an active automated communication line via WhatsApp.
+This system centralizes those workflows into a single web application while maintaining an active automated communication line via WhatsApp—a tool already deeply ingrained in rural communities.
 
 ## 3. Objectives
 
@@ -68,8 +70,8 @@ This system centralizes those workflows into a single web application while main
 | Timetable Management | Implemented | Admin add/delete slots, student filtered view (Grid-based UI) |
 | Results Management | Implemented | Score tracking, absence tracking, WhatsApp broadcast |
 | Real WhatsApp Automation | Implemented | Fully integrated via `whatsapp-web.js` with customizable templates |
-| Database Persistence | Planned | Planning to use MongoDB Atlas |
-| Real Deployment | Planned | AWS EC2 (backend) and Vercel (frontend) planned |
+| Database Persistence | Implemented | MongoDB Atlas integration |
+| Real Deployment | Implemented | Deployed on AWS EC2 (backend) and Vercel (frontend) |
 
 ## 6. Technology Stack
 
@@ -105,10 +107,10 @@ This system centralizes those workflows into a single web application while main
 4. Token is sent in Authorization header for protected APIs.
 5. Backend validates token and performs business logic.
 6. The Backend initializes a headless WhatsApp Web client for communication.
-7. Data is currently stored in in-memory arrays in server process.
+7. Data is securely persisted in MongoDB Atlas collections.
 
 Logical flow:
-Browser (Admin/Student) -> React app -> Express API -> In-memory data store + WhatsApp Client
+Browser (Admin/Student) -> React app -> Express API -> MongoDB Atlas + WhatsApp Client
 
 ## 8. Project Structure
 
@@ -131,9 +133,9 @@ Browser (Admin/Student) -> React app -> Express API -> In-memory data store + Wh
       `-- whatsappClient.js
 ```
 
-## 9. Core Backend Data Model (Current)
+## 9. Core Backend Data Model (MongoDB)
 
-The backend uses seeded in-memory arrays, structuring data to be easily ported to MongoDB.
+The backend securely persists data within MongoDB collections. The primary schemas include:
 
 ### 9.1 Student
 - id, name, password (bcrypt hash), phoneNumber
@@ -210,6 +212,7 @@ Base URL (local): `http://localhost:5000`
 ### 13.1 Prerequisites
 - Node.js installed
 - npm installed
+- MongoDB connection details (Atlas or local)
 
 ### 13.2 Start Application
 From the repository root folder:
@@ -232,14 +235,7 @@ npm run dev
   - password: `password123`
 
 ## 15. Security and Auth Notes
-- Passwords are encrypted as bcrypt hashes in memory.
+- Passwords are encrypted as bcrypt hashes before being stored in MongoDB.
 - JWT tokens are required after login for protected APIs.
 - Role value (admin/student) is used for route-level protection in frontend.
 - Strict CORS rules enforce authorized origins in the backend.
-
-## 16. Future Enhancements
-- Integrate MongoDB/PostgreSQL for persistent data.
-- Deploy to cloud (AWS EC2 + Vercel).
-- Add online student payment workflow (Stripe/Razorpay).
-- Add full role-based admin permissions and audit logs.
-- Add automated unit and integration tests.

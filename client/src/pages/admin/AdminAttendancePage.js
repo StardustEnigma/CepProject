@@ -63,7 +63,7 @@ const AdminAttendancePage = () => {
         const subjectName = selectedSlot?.subject || "General";
         const currentEntry = student.attendance.find((entry) => entry.date === attendanceDate && entry.subject === subjectName);
         const presentCount = student.attendance.filter((entry) => entry.present).length;
-        
+
         return {
           id: student.id,
           name: student.name,
@@ -104,34 +104,46 @@ const AdminAttendancePage = () => {
       {error ? <p className="alert alert-error">{error}</p> : null}
       {success ? <p className="alert alert-success">{success}</p> : null}
 
-      <div className="form-grid" style={{ marginBottom: "20px" }}>
-        <input
-          className="input"
-          type="date"
-          value={attendanceDate}
-          onChange={(event) => {
-            setAttendanceDate(event.target.value);
-            setSelectedSlotId("");
-          }}
-        />
-        <select
-          className="input"
-          value={selectedSlotId}
-          onChange={(event) => setSelectedSlotId(event.target.value)}
-        >
-          <option value="">-- Select Timetable Slot ({dayName}) --</option>
-          {availableSlots.map(slot => (
-            <option key={slot.id} value={slot.id}>
-              {slot.batch} - {slot.subject} ({slot.startTime}-{slot.endTime})
-            </option>
-          ))}
-        </select>
+      <div className="form-grid" style={{ marginBottom: "0.5rem" }}>
+        <div>
+          <label>Select Date</label>
+          <input
+            className="input"
+            type="date"
+            value={attendanceDate}
+            onChange={(event) => {
+              setAttendanceDate(event.target.value);
+              setSelectedSlotId("");
+            }}
+          />
+        </div>
+        <div>
+          <label>Timetable Slot ({dayName || "—"})</label>
+          <select
+            className="input"
+            value={selectedSlotId}
+            onChange={(event) => setSelectedSlotId(event.target.value)}
+          >
+            <option value="">— Select a slot —</option>
+            {availableSlots.map(slot => (
+              <option key={slot.id} value={slot.id}>
+                {slot.batch} - {slot.subject} ({slot.startTime}–{slot.endTime})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {isLoading ? (
         <p className="loading-text">Loading attendance summary...</p>
       ) : !selectedSlotId ? (
-        <p className="muted">Please select a date and time slot to mark attendance.</p>
+        <div className="empty-state">
+          <p className="muted">Please select a date and time slot to mark attendance.</p>
+        </div>
+      ) : attendanceSummary.length === 0 ? (
+        <div className="empty-state">
+          <p className="muted">No students found for this slot.</p>
+        </div>
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -147,28 +159,35 @@ const AdminAttendancePage = () => {
             <tbody>
               {attendanceSummary.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.name}</td>
+                  <td style={{ fontWeight: 600 }}>{row.name}</td>
                   <td>
-                    <span className={row.statusToday === "Present" ? "text-success" : row.statusToday === "Absent" ? "text-danger" : ""}>
+                    <span className={
+                      row.statusToday === "Present"
+                        ? "status-badge present"
+                        : row.statusToday === "Absent"
+                        ? "status-badge absent"
+                        : "muted"
+                    }>
                       {row.statusToday}
                     </span>
                   </td>
                   <td>{row.presentCount}</td>
                   <td>{row.totalCount}</td>
                   <td>
-                    <button
-                      className="button button-success"
-                      style={{ backgroundColor: '#28a745', color: '#fff', marginRight: '6px', marginBottom: '4px' }}
-                      onClick={() => handleMarkAttendance(row.id, true)}
-                    >
-                      Present
-                    </button>
-                    <button
-                      className="button button-danger"
-                      onClick={() => handleMarkAttendance(row.id, false)}
-                    >
-                      Absent
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      <button
+                        className="button button-success button-sm"
+                        onClick={() => handleMarkAttendance(row.id, true)}
+                      >
+                        Present
+                      </button>
+                      <button
+                        className="button button-danger button-sm"
+                        onClick={() => handleMarkAttendance(row.id, false)}
+                      >
+                        Absent
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

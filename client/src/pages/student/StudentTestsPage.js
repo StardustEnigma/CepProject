@@ -14,11 +14,8 @@ const StudentTestsPage = () => {
           const studentData = await apiFetch(`/students/${user.id}`);
           setTests(studentData.testResults || []);
         }
-      } catch (err) {
-        setError(err.message || "Failed to load tests.");
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (err) { setError(err.message || "Failed to load tests."); }
+      finally { setIsLoading(false); }
     };
     fetchTests();
   }, []);
@@ -26,49 +23,36 @@ const StudentTestsPage = () => {
   return (
     <div className="admin-page">
       <h2>My Test Results</h2>
-
       {error ? <p className="alert alert-error">{error}</p> : null}
 
       {isLoading ? (
         <p className="loading-text">Loading test results...</p>
       ) : tests.length === 0 ? (
-        <p className="muted">No test results available yet.</p>
+        <div className="empty-state">
+          <p className="muted">No test results available yet.</p>
+        </div>
       ) : (
         <div className="table-wrap">
           <table className="table">
-            <thead>
-              <tr>
-                <th>Subject</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Marks Obtained</th>
-                <th>Total Marks</th>
-                <th>Percentage</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Subject</th><th>Date</th><th>Status</th><th>Marks Obtained</th><th>Total Marks</th><th>Percentage</th></tr></thead>
             <tbody>
               {tests.map(test => {
-                const percentage = test.marks != null && !test.isAbsent && test.maxMarks > 0
-                  ? Math.round((test.marks / test.maxMarks) * 100)
-                  : 0;
-
+                const percentage = test.marks != null && !test.isAbsent && test.maxMarks > 0 ? Math.round((test.marks / test.maxMarks) * 100) : 0;
                 return (
                   <tr key={test.id}>
-                    <td><strong>{test.subject}</strong></td>
+                    <td style={{ fontWeight: 700 }}>{test.subject}</td>
                     <td>{test.date}</td>
                     <td>
-                      {test.isAbsent ? (
-                        <span style={{ color: "#c62828", fontWeight: 600 }}>Absent</span>
-                      ) : test.hasResult ? (
-                        <span style={{ color: "#2e7d32", fontWeight: 600 }}>Evaluated</span>
-                      ) : (
-                        <span className="muted">Pending</span>
-                      )}
+                      {test.isAbsent ? (<span className="status-badge absent">Absent</span>)
+                        : test.hasResult ? (<span className="status-badge present">Evaluated</span>)
+                        : (<span className="muted">Pending</span>)}
                     </td>
-                    <td>{test.isAbsent ? "-" : (test.marks ?? "-")}</td>
+                    <td style={{ fontWeight: 600 }}>{test.isAbsent ? "—" : (test.marks ?? "—")}</td>
                     <td>{test.maxMarks}</td>
                     <td>
-                      {test.isAbsent ? "-" : (test.hasResult ? `${percentage}%` : "-")}
+                      {test.isAbsent ? "—" : (test.hasResult ? (
+                        <span style={{ fontWeight: 700, color: percentage >= 70 ? '#1a7a2e' : percentage >= 40 ? '#b8860b' : '#c42020' }}>{percentage}%</span>
+                      ) : "—")}
                     </td>
                   </tr>
                 );
