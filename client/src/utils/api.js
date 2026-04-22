@@ -17,6 +17,9 @@ export const apiFetch = async (endpoint, options = {}) => {
     headers["Content-Type"] = "application/json";
   }
 
+  // Bypass ngrok browser warning screen which blocks CORS requests
+  headers["ngrok-skip-browser-warning"] = "true";
+
   const url = `${API_BASE}${endpoint}`;
 
   const response = await fetch(url, {
