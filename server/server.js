@@ -69,6 +69,7 @@ const batchSubjects = {
 const defaultWhatsAppTemplates = {
   welcome: "Welcome to Gurukul Academy, {{name}}! We are happy to have you with us.",
   feeReminder: "Dear {{name}}, this is a gentle reminder that Rs. {{feesPending}} in tuition fees are currently pending at Gurukul Academy. Kindly complete your payment soon.",
+  feePayment: "*Payment Received - Gurukul Academy*\n\nStudent: {{name}}\nClass: {{batch}}\nAmount Paid: Rs. {{amountPaid}}\nPayment Mode: {{mode}}\nDate: {{date}}\nReceipt No: {{receiptNo}}\n\nTotal Fees: Rs. {{feesTotal}}\nFees Pending: Rs. {{feesPending}}\n\nThank you for your payment!",
   testResult: "Test Result at Gurukul Academy\nSubject: {{subject}}\nDate: {{date}}\nStudent: {{name}}\nScore: {{marks}}/{{maxMarks}}\nStatus: {{status}}",
   notice: "Notice from Gurukul Academy:\n\n*{{title}}*\n{{content}}"
 };
@@ -495,12 +496,35 @@ app.post("/students/:id/pay", async (req, res) => {
   student.feesPaid = (student.feesPaid || 0) + Number(amount);
   await student.save();
 
+  // Send WhatsApp payment confirmation
+  const feesPending = getStudentFeesPending(student);
+  const paymentContext = {
+    name: student.name,
+    batch: student.batch,
+    phoneNumber: student.phoneNumber,
+    feesTotal: Number(student.feesTotal || 0),
+    feesPaid: Number(student.feesPaid || 0),
+    feesPending,
+    amountPaid: payment.amount,
+    mode: payment.mode,
+    date: payment.date,
+    receiptNo: payment.paymentId
+  };
+  const paymentMessage = renderTemplate(whatsappTemplates.feePayment, paymentContext);
+  const waDelivery = await sendWhatsAppText(student.phoneNumber, paymentMessage);
+  await updateWhatsAppDeliveryOnStudent(student, "fee-payment", waDelivery, paymentMessage);
+
+  // Re-fetch to get updated WhatsApp fields
+  const updatedStudent = await Student.findOne({ id: studentId }).lean();
   const tests = await Test.find({ batch: student.batch }).lean();
 
   return res.json({
-    message: "Payment processed successfully",
-    student: sanitizeStudent(student.toObject(), tests),
-    payment: { id: payment.paymentId, amount: payment.amount, mode: payment.mode, date: payment.date }
+    message: waDelivery.sent
+      ? "Payment processed and receipt sent via WhatsApp."
+      : "Payment processed successfully. WhatsApp receipt is pending.",
+    student: sanitizeStudent(updatedStudent, tests),
+    payment: { id: payment.paymentId, amount: payment.amount, mode: payment.mode, date: payment.date },
+    whatsapp: waDelivery
   });
 });
 

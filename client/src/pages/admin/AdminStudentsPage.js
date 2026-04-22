@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import jsPDF from "jspdf";
+import "jspdf-autotable";
 import { apiFetch } from "../../utils/api";
+import logoSrc from "../../logo.webp";
 
 const batchSubjectsMap = {
   "8th class": ["Maths", "Science", "English", "SST"],
@@ -28,6 +30,24 @@ const AdminStudentsPage = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const logoDataUrl = useRef(null);
+
+  // Preload logo as PNG data URL (jsPDF doesn't support webp)
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        logoDataUrl.current = canvas.toDataURL("image/png");
+      } catch (_) { /* ignore if canvas fails */ }
+    };
+    img.src = logoSrc;
+  }, []);
 
   const loadStudents = async () => { const data = await apiFetch("/students"); setStudents(data); };
   const loadWhatsAppStatus = async () => { const s = await apiFetch("/whatsapp/status"); setWhatsappStatus(s); return s; };
@@ -123,23 +143,157 @@ const AdminStudentsPage = () => {
     try {
       const data = await apiFetch(`/students/${payModal.studentId}/pay`, { method: "POST", body: JSON.stringify({ amount: Number(payModal.amount), mode: payModal.mode }) });
       const student = data.student;
-      const paymentDate = data.payment.date;
+      const payment = data.payment;
+
+      // ── Build Professional PDF Receipt ──
       const doc = new jsPDF();
-      doc.setFontSize(22); doc.text("Gurukul Academy", 105, 20, { align: "center" });
-      doc.setFontSize(10); doc.text("The Way to Success", 105, 28, { align: "center" });
-      doc.setFontSize(14); doc.text("Fee Receipt", 105, 38, { align: "center" });
-      doc.setFontSize(12);
-      doc.text(`Student Name: ${student.name}`, 20, 50);
-      doc.text(`Class/Batch: ${student.batch}`, 20, 60);
-      doc.text(`Payment Date: ${paymentDate}`, 20, 70);
-      doc.text(`Payment Mode: ${payModal.mode}`, 20, 80);
-      doc.setFontSize(14);
-      doc.text(`Amount Paid: Rs. ${payModal.amount}`, 20, 100);
-      doc.text(`Fees Pending: Rs. ${student.feesPending}`, 20, 110);
-      doc.save(`Receipt_${student.name.replace(/ /g, "_")}_${data.payment.id}.pdf`);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const brandColor = [217, 79, 0]; // Gurukul saffron/orange
+      const darkColor = [26, 18, 7];
+      const mutedColor = [100, 90, 75];
+      let y = 14;
+
+      // ── Top accent bar ──
+      doc.setFillColor(...brandColor);
+      doc.rect(0, 0, pageWidth, 5, "F");
+      y = 16;
+
+      // ── Logo ──
+      if (logoDataUrl.current) {
+        doc.addImage(logoDataUrl.current, "PNG", pageWidth / 2 - 18, y, 36, 36);
+        y += 40;
+      }
+
+      // ── Academy Name ──
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(...brandColor);
+      doc.text("GURUKUL ACADEMY", pageWidth / 2, y, { align: "center" });
+      y += 7;
+
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(10);
+      doc.setTextColor(...mutedColor);
+      doc.text("The Way to Success", pageWidth / 2, y, { align: "center" });
+      y += 10;
+
+      // ── Divider ──
+      doc.setDrawColor(...brandColor);
+      doc.setLineWidth(0.6);
+      doc.line(20, y, pageWidth - 20, y);
+      y += 8;
+
+      // ── Receipt Title ──
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(...darkColor);
+      doc.text("FEE RECEIPT", pageWidth / 2, y, { align: "center" });
+      y += 10;
+
+      // ── Receipt meta ──
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...mutedColor);
+      doc.text(`Receipt No: ${payment.id}`, 20, y);
+      doc.text(`Date: ${payment.date}`, pageWidth - 20, y, { align: "right" });
+      y += 8;
+
+      // ── Student Info Table ──
+      doc.autoTable({
+        startY: y,
+        head: [["Student Details", ""]],
+        body: [
+          ["Student Name", student.name],
+          ["Class / Batch", student.batch],
+          ["Phone Number", student.phoneNumber || "—"],
+        ],
+        theme: "grid",
+        headStyles: {
+          fillColor: brandColor,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 10,
+          halign: "left",
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: darkColor,
+        },
+        columnStyles: {
+          0: { fontStyle: "bold", cellWidth: 55, textColor: mutedColor },
+          1: { cellWidth: "auto" },
+        },
+        margin: { left: 20, right: 20 },
+        tableLineColor: [200, 190, 175],
+        tableLineWidth: 0.25,
+      });
+
+      y = doc.lastAutoTable.finalY + 8;
+
+      // ── Payment Details Table ──
+      doc.autoTable({
+        startY: y,
+        head: [["Payment Details", ""]],
+        body: [
+          ["Amount Paid", `Rs. ${Number(payment.amount).toLocaleString()}`],
+          ["Payment Mode", payment.mode],
+          ["Total Fees", `Rs. ${Number(student.feesTotal).toLocaleString()}`],
+          ["Fees Pending", `Rs. ${Number(student.feesPending).toLocaleString()}`],
+        ],
+        theme: "grid",
+        headStyles: {
+          fillColor: brandColor,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 10,
+          halign: "left",
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: darkColor,
+        },
+        columnStyles: {
+          0: { fontStyle: "bold", cellWidth: 55, textColor: mutedColor },
+          1: { cellWidth: "auto" },
+        },
+        margin: { left: 20, right: 20 },
+        tableLineColor: [200, 190, 175],
+        tableLineWidth: 0.25,
+        didParseCell: (hookData) => {
+          // Highlight pending row in red if > 0
+          if (hookData.section === "body" && hookData.row.index === 3 && student.feesPending > 0) {
+            hookData.cell.styles.textColor = [196, 32, 32];
+            hookData.cell.styles.fontStyle = "bold";
+          }
+        },
+      });
+
+      y = doc.lastAutoTable.finalY + 14;
+
+      // ── Thank you note ──
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...brandColor);
+      doc.text("Thank you for your payment!", pageWidth / 2, y, { align: "center" });
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...mutedColor);
+      doc.text("This is a computer-generated receipt and does not require a signature.", pageWidth / 2, y, { align: "center" });
+
+      // ── Bottom accent bar ──
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFillColor(...brandColor);
+      doc.rect(0, pageHeight - 5, pageWidth, 5, "F");
+
+      doc.save(`Receipt_${student.name.replace(/ /g, "_")}_${payment.id}.pdf`);
+
       setPayModal({ studentId: null, amount: "", mode: "UPI" });
       await loadStudents();
-      setSuccess("Fee paid successfully and receipt downloaded.");
+      const waMsg = data.whatsapp?.sent
+        ? "Fee paid, receipt downloaded, and sent via WhatsApp."
+        : "Fee paid and receipt downloaded.";
+      setSuccess(waMsg);
     } catch (e) { setError(e.message || "Unable to process payment."); }
   };
 
