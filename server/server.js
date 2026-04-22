@@ -47,7 +47,7 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:3000", "http://localhost:5000"].filter(Boolean);
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1") || allowedOrigins.includes(origin) || (origin && origin.endsWith(".vercel.app"))) {
+    if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1") || allowedOrigins.includes(origin) || (origin && origin.includes("ngrok"))) {
       callback(null, true);
     } else {
       console.warn("Blocked by CORS origin:", origin);
