@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../utils/api";
 
-const parseResponse = async (response) => {
-  const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -32,9 +25,9 @@ const StudentDashboard = () => {
         setError("");
 
         const [studentData, noticesData, timetableData] = await Promise.all([
-          fetch(`/students/${studentId}`).then(parseResponse),
-          fetch("/notices").then(parseResponse),
-          fetch("/timetable").then(parseResponse)
+          apiFetch(`/students/${studentId}`),
+          apiFetch("/notices"),
+          apiFetch("/timetable")
         ]);
 
         const safeSubjects = studentData.subjects || [];

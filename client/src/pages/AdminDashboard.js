@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../utils/api";
 
 const today = new Date().toISOString().slice(0, 10);
 const dayOptions = [
@@ -21,15 +22,7 @@ const batchSubjectsMap = {
   "12th class": ["Physics", "Chemistry", "Biology", "Maths"]
 };
 
-const parseResponse = async (response) => {
-  const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-
-  return data;
-};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -68,9 +61,9 @@ const AdminDashboard = () => {
 
   const refreshData = async () => {
     const [studentsData, noticesData, timetableData] = await Promise.all([
-      fetch("/students").then(parseResponse),
-      fetch("/notices").then(parseResponse),
-      fetch("/timetable").then(parseResponse)
+      apiFetch("/students"),
+      apiFetch("/notices"),
+      apiFetch("/timetable")
     ]);
 
     setStudents(studentsData);
@@ -129,15 +122,10 @@ const AdminDashboard = () => {
     clearFlashMessages();
 
     try {
-      const response = await fetch("/students", {
+      await apiFetch("/students", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify(studentForm)
       });
-
-      await parseResponse(response);
       setStudentForm({ 
         name: "", 
         password: "", 
@@ -161,11 +149,9 @@ const AdminDashboard = () => {
     }
 
     try {
-      const response = await fetch(`/students/${studentId}`, {
+      await apiFetch(`/students/${studentId}`, {
         method: "DELETE"
       });
-
-      await parseResponse(response);
       await refreshData();
       setSuccess("Student deleted successfully.");
     } catch (requestError) {
@@ -178,11 +164,8 @@ const AdminDashboard = () => {
     clearFlashMessages();
 
     try {
-      const response = await fetch("/attendance", {
+      await apiFetch("/attendance", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify({
           studentId: Number(attendanceForm.studentId),
           date: attendanceForm.date,
@@ -190,8 +173,6 @@ const AdminDashboard = () => {
           present: attendanceForm.present
         })
       });
-
-      await parseResponse(response);
       await refreshData();
       setSuccess("Attendance marked successfully.");
     } catch (requestError) {
@@ -204,15 +185,10 @@ const AdminDashboard = () => {
     clearFlashMessages();
 
     try {
-      const response = await fetch("/notices", {
+      await apiFetch("/notices", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify(noticeForm)
       });
-
-      await parseResponse(response);
       setNoticeForm({ title: "", content: "" });
       await refreshData();
       setSuccess("Notice posted successfully.");
@@ -226,15 +202,10 @@ const AdminDashboard = () => {
     clearFlashMessages();
 
     try {
-      const response = await fetch("/timetable", {
+      await apiFetch("/timetable", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
         body: JSON.stringify(timetableForm)
       });
-
-      await parseResponse(response);
       setTimetableForm((prev) => ({
         ...prev,
         subject: batchSubjectsMap[prev.batch][0],
@@ -256,11 +227,9 @@ const AdminDashboard = () => {
     }
 
     try {
-      const response = await fetch(`/timetable/${entryId}`, {
+      await apiFetch(`/timetable/${entryId}`, {
         method: "DELETE"
       });
-
-      await parseResponse(response);
       await refreshData();
       setSuccess("Timetable entry deleted successfully.");
     } catch (requestError) {
